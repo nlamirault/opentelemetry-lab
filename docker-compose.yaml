@@ -1,0 +1,198 @@
+# Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+services:
+
+  loki:
+    image: grafana/loki:3.2.0
+    container_name: loki
+    entrypoint: /usr/bin/loki
+    command: ["-config.file=/etc/loki/config.yaml"]
+    volumes:
+    - ./etc/loki/config.yaml:/etc/loki/config.yaml
+    - loki-data:/loki
+    networks:
+    - opentelemetry-lab
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.100.0
+    container_name: otel
+    command:
+    - "--config=/conf/config.yaml"
+    volumes:
+    - ./etc/otel/otel-collector.yaml:/conf/config.yaml
+    ports:
+    - "4317:4317" # OTLP gRPC receiver
+    - "4318:4318" # OTLP http receiver
+    - "8889:8889" # Prometheus metrics exporter
+    networks:
+    - opentelemetry-lab
+
+  tempo:
+    image: grafana/tempo:2.6.0
+    container_name: tempo
+    command: ["-config.file=/etc/tempo/config.yaml"]
+    volumes:
+    - ./etc/tempo/config.yaml:/etc/tempo/config.yaml
+    - tempo-data:/var/tempo
+    ports:
+    - "4417:4317" # OTLP gRPC receiver
+    - "4418:4318" # OTLP http receiver
+    networks:
+    - opentelemetry-lab
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: prometheus
+    ports:
+    - "9090:9090"
+    volumes:
+    - ./etc/prometheus/prometheus.yml:/workspace/prometheus.yml
+    command:
+    - --config.file=/workspace/prometheus.yml
+    - --enable-feature=remote-write-receiver
+    - --enable-feature=otlp-write-receiver
+    networks:
+    - opentelemetry-lab
+
+  grafana:
+    image: grafana/grafana:11.2.1
+    container_name: grafana
+    ports:
+    - "3000:3000"
+    volumes:
+    - ./etc/grafana/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
+    - ./etc/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+    - ./etc/grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_FEATURE_TOGGLES_ENABLE: "timeSeriesTable,traceqlEditor"
+    networks:
+    - opentelemetry-lab
+
+  otel-python:
+    build: ./apps/otel-python/
+    ports:
+    - "8000:8000"
+    environment:
+    - EXPOSE_PORT=8000
+    - TARGET_ONE_SVC=http://otel-js:3001
+    - TARGET_TWO_SVC=http://otel-java:8080
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_INSECURE=true
+    - OTEL_TRACES_EXPORTER=otlp
+    - OTEL_METRICS_EXPORTER=otlp
+    - OTEL_LOGS_EXPORTER=otlp
+    - OTEL_SERVICE_NAME=otel-python
+    command: "opentelemetry-instrument python main.py"
+    networks:
+    - opentelemetry-lab
+
+  otel-java:
+    build: ./apps/otel-java/
+    container_name: otel-java
+    ports:
+    - "8080:8080"
+    environment:
+    - EXPOSE_PORT=8080
+    - TARGET_ONE_SVC=http://otel-python:8000
+    - TARGET_TWO_SVC=http://otel-js:3001
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_INSECURE=true
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    - OTEL_TRACES_EXPORTER=otlp
+    - OTEL_METRICS_EXPORTER=otlp
+    - OTEL_LOGS_EXPORTER=otlp
+    - OTEL_SERVICE_NAME=otel-java
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=docker,host.name=otel-demo
+    command: "java -javaagent:/opentelemetry-javaagent.jar -jar /app.jar"
+    networks:
+    - opentelemetry-lab
+
+  otel-js:
+    build: ./apps/otel-js/
+    container_name: otel-js
+    ports:
+    - "3001:3001"
+    environment:
+    - EXPOSE_PORT=3001
+    - TARGET_ONE_SVC=http://otel-go:8888
+    - TARGET_TWO_SVC=http://otel-rust:9999
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    - OTEL_TRACES_EXPORTER=otlp
+    - OTEL_METRICS_EXPORTER=otlp
+    - OTEL_LOGS_EXPORTER=otlp
+    - OTEL_SERVICE_NAME=otel-js
+    command: "node --require '@opentelemetry/auto-instrumentations-node/register' app.js"
+    networks:
+    - opentelemetry-lab
+
+  otel-rust:
+    build: ./apps/otel-rust/
+    container_name: otel-rust
+    ports:
+    - "9999:9999"
+    environment:
+    - EXPOSE_PORT=9999
+    - TARGET_ONE_SVC=http://otel-go:8888
+    - TARGET_TWO_SVC=http://otel-python:8000
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    - OTEL_TRACES_EXPORTER=otlp
+    - OTEL_METRICS_EXPORTER=otlp
+    - OTEL_LOGS_EXPORTER=otlp
+    - OTEL_SERVICE_NAME=otel-rust
+    # command: "otel-rust"
+    networks:
+    - opentelemetry-lab
+
+  otel-go:
+    build: ./apps/otel-go/
+    container_name: otel-go
+    ports:
+    - "8888:8888"
+    environment:
+    - EXPOSE_PORT=8888
+    - TARGET_ONE_SVC=http://otel-rust:9999
+    - TARGET_TWO_SVC=http://otel-java:8080
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    - OTEL_TRACES_EXPORTER=otlp
+    - OTEL_METRICS_EXPORTER=otlp
+    - OTEL_LOGS_EXPORTER=otlp
+    - OTEL_SERVICE_NAME=otel-go
+    # command: "otel-go"
+    networks:
+    - opentelemetry-lab
+
+  otel-swift:
+    build: ./apps/otel-swift/
+    container_name: otel-swift
+    ports:
+    - '9191:9191'
+    environment:
+    - EXPOSE_PORT=9191
+    - TARGET_ONE_SVC=http://otel-rust:9999
+    - TARGET_TWO_SVC=http://otel-js:3001
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    - OTEL_TRACES_EXPORTER=otlp
+    - OTEL_METRICS_EXPORTER=otlp
+    - OTEL_LOGS_EXPORTER=otlp
+    - OTEL_SERVICE_NAME=otel-swift
+    - LOG_LEVEL=debug
+    command: ["serve", "--env", "production", "--hostname", "0.0.0.0", "--port", "9191"]
+
+volumes:
+  tempo-data:
+  loki-data:
+
+networks:
+  opentelemetry-lab:
+    driver: bridge
+    name: opentelemetry-lab
