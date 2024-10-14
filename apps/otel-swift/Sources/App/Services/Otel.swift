@@ -19,7 +19,7 @@ struct OTelResourceProvider {
             ResourceAttributes.telemetrySdkLanguage.rawValue: AttributeValue.string("swift"),
             ResourceAttributes.telemetrySdkVersion.rawValue: AttributeValue.string(Resource.OTEL_SWIFT_SDK_VERSION)
         ])
-        let defaultResources = DefaultResources().get()
+        let defaultResources: Resource = DefaultResources().get()
         return defaultResources.merging(other: customResource)
     }
 }

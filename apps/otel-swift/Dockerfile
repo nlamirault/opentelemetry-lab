@@ -7,7 +7,8 @@ FROM swift:6.0-noble AS build
 RUN export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true \
     && apt-get -q update \
     && apt-get -q dist-upgrade -y \
-    && apt-get install -y libjemalloc-dev
+    && apt-get install -y libjemalloc-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set up a build area
 WORKDIR /build
@@ -23,11 +24,18 @@ RUN swift package resolve \
 # Copy entire repo into container
 COPY . .
 
+# Clean the packages cache.
+RUN swift package clean
+
+# Update build hash in application version constant.
+# RUN commit=$(git rev-parse --short HEAD) && sed -i -e "s/buildx/$commit/g" Sources/App/Utilities/Constants.swift
+
 # Build everything, with optimizations, with static linking, and using jemalloc
 # N.B.: The static version of jemalloc is incompatible with the static Swift runtime.
-RUN swift build -c release \
-                --static-swift-stdlib \
-                -Xlinker -ljemalloc
+# RUN swift build -c release \
+#                 --static-swift-stdlib \
+#                 -Xlinker -ljemalloc
+RUN swift build -c release
 
 # Switch to the staging area
 WORKDIR /staging
@@ -84,5 +92,4 @@ USER vapor:vapor
 EXPOSE 9191
 
 ENTRYPOINT ["./App"]
-CMD ["serve", "--env", "production", "--hostname", "0.0.0.0"] 
-# , "--port", "9191"]
+CMD ["serve", "--env", "production", "--hostname", "0.0.0.0", "--port", "9191"]

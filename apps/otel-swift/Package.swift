@@ -1,7 +1,7 @@
 // swift-tools-version:6.0
 import PackageDescription
 
-let package = Package(
+let package: Package = Package(
     name: "otel-swift",
     platforms: [
        .macOS(.v13)
@@ -21,12 +21,10 @@ let package = Package(
                 .product(name: "NIOPosix", package: "swift-nio"),
                 .product(name: "GRPC", package: "grpc-swift"),
                 .product(name: "OpenTelemetryApi", package: "opentelemetry-swift"),
-                .product(name: "OpenTelemetrySdk", package: "opentelemetry-swift"),
-                .product(name: "StdoutExporter", package: "opentelemetry-swift"),
-                .product(name: "ResourceExtension", package: "opentelemetry-swift"),
                 .product(name: "OpenTelemetryProtocolExporter", package: "opentelemetry-swift"),
                 .product(name: "OpenTelemetryProtocolExporterHTTP", package: "opentelemetry-swift"),
-                // .product(name: "OpenTelemetryProtocolExporterGrpc", package: "opentelemetry-swift"),
+                .product(name: "OpenTelemetrySdk", package: "opentelemetry-swift"),
+                .product(name: "ResourceExtension", package: "opentelemetry-swift"),
                 .product(name: "StdoutExporter", package: "opentelemetry-swift"),
             ],
             swiftSettings: swiftSettings
@@ -44,6 +42,6 @@ let package = Package(
 )
 
 var swiftSettings: [SwiftSetting] { [
-    .enableUpcomingFeature("DisableOutwardActorInference"),
-    .enableExperimentalFeature("StrictConcurrency"),
+    // .enableUpcomingFeature("DisableOutwardActorInference"),
+    // .enableExperimentalFeature("StrictConcurrency"),
 ] }

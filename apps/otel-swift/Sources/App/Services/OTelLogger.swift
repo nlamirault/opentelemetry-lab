@@ -5,17 +5,17 @@ import OpenTelemetryProtocolExporterCommon
 import OpenTelemetryProtocolExporterGrpc
 import OpenTelemetryProtocolExporterHttp
 import OpenTelemetrySdk
-import StdoutExporter
+// import StdoutExporter
 import Vapor
 
 
 class OpenTelemetryLogger {
     static let instance: OpenTelemetryLogger = OpenTelemetryLogger()
-    
+
     private init() {}
-    
+
     private var isInitialized: Bool = false
-    
+
     func initialize(endpoint: String?) throws -> Void {
         guard isInitialized == false else { return }
         isInitialized = true
@@ -53,7 +53,7 @@ class OpenTelemetryLogger {
             throw OpenTelemetryError.invalidProtocol
         }
 
-        let stdoutExporter: StdoutLogExporter = StdoutLogExporter()
+        // let stdoutExporter: StdoutLogExporter = StdoutLogExporter()
 
         // let logProcessor = SimpleLogRecordProcessor(logRecordExporter: logExporter)
         let logProcessor: BatchLogRecordProcessor = BatchLogRecordProcessor(logRecordExporter: logExporter)
