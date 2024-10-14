@@ -1,0 +1,76 @@
+# Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  prometheus/collector:
+    config:
+      scrape_configs:
+      - job_name: 'opentelemetry-collector'
+        static_configs:
+        - targets: ['localhost:8888']
+
+exporters:
+  otlphttp/metrics:
+    endpoint: http://prometheus:9090/api/v1/otlp
+    tls:
+      insecure: true
+
+  otlphttp/traces:
+    endpoint: http://tempo:4418
+    tls:
+      insecure: true
+
+  otlphttp/logs:
+    endpoint: http://loki:3100/otlp
+    tls:
+      insecure: true
+
+  debug/metrics:
+    verbosity: detailed
+  debug/traces:
+    verbosity: detailed
+  debug/logs:
+    verbosity: detailed
+
+  # otlp:
+  #   endpoint: tempo:4317
+  #   tls:
+  #     insecure: true
+  # prometheus:
+  #   endpoint: "0.0.0.0:8889"
+
+connectors:
+  spanmetrics:
+    dimensions:
+    - name: http.method
+    - name: http.status_code
+    - name: http.route
+
+processors:
+  batch:
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/traces] #, debug/traces]
+    # metrics/spanmetrics:
+    #   receivers: [spanmetrics]
+    #   exporters: [prometheus]
+    metrics:
+      receivers: [otlp, prometheus/collector]
+      processors: [batch]
+      exporters: [otlphttp/metrics] #, debug/metrics]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/logs] # , debug/logs]
