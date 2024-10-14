@@ -1,0 +1,19 @@
+# Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# PR labels and the branch patterns they should be auto-assigned to
+kind/feature: ['feature/*', 'feat/*']
+kind/bug: ['fix/*', 'hot-fix/*', 'bug-fix/*']
+kind/documentation: ['documentation/*']
+
+# 🚀 kind/feature: ['feature/*', 'feat/*']
+# 🐛 kind/bug: ['fix/*', 'hot-fix/*', 'bug-fix/*']
+# 🚚 Refactor: ['IMPROVMENTS/*', 'REFACTOR/*']
+# 💯 Showcase: ['SHOWCASE/*', 'SHOWCASE_SUBMISSION/*']
+# 💄 Stylistic Changes: ['STYLES/*', 'THEME/*', 'UI/*']
+# 🏗️ Architectural Changes: ['ARCH/*', 'ARCHITECTURE/*']
+# 🛠️ Build Changes: ['DOCKER/*', 'BUILD/*', 'CI/*', 'ACTIONS/*']
+# 🌐 Language: ['LANG/*', 'INTERNATIONALIZATION/*', 'I18N/*', 'TEXT-UPDATE/*']
+# ⛔ Don't Merge: ['WEBSITE/*', 'EXPERIMENT/*', 'DEPLOY/*', 'deploy_*', 'gh-pages', 'dev-demo']
