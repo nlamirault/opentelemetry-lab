@@ -21,7 +21,8 @@ repos:
   hooks:
   - id: insert-license
     stages: [commit]
-    files: (Makefile|\.mk|\.yaml|\.yml|\.toml|\.go|\.py|\.rs|\.java|\.js)
+    files: (Makefile|Dockerfile|\.mk|\.yaml|\.yml|\.toml|\.py)
+    exclude: (\.json)
     args:
     - --license-filepath
     - hack/LICENSE.txt
@@ -31,7 +32,7 @@ repos:
   hooks:
   - id: insert-license
     stages: [commit]
-    files: (\.json5)
+    files: (\.go|\.rs|\.js|\.java|\.json5)
     args:
     - --license-filepath
     - hack/LICENSE.txt
