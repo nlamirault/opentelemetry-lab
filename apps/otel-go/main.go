@@ -1,8 +1,5 @@
-# Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
-#
-# SPDX-License-Identifier: Apache-2.0
-
-// Copyright The OpenTelemetry Authors
+// Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+//
 // SPDX-License-Identifier: Apache-2.0
 
 package main
@@ -12,21 +9,19 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
-	"os"
 	"net/http"
-	"runtime"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/contrib/instrumentation/host"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
-	"go.opentelemetry.io/otel/attribute"
 	otelruntime "go.opentelemetry.io/contrib/instrumentation/runtime"
-	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
+	sdkresource "go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -84,7 +79,7 @@ func main() {
 	// 		slogformatter.TimezoneConverter(time.UTC),
 	// 		slogformatter.TimeFormatter(time.RFC3339, nil),
 	// 		slogformatter.HTTPRequestFormatter(false),
-    //     	slogformatter.HTTPResponseFormatter(false),
+	//     	slogformatter.HTTPResponseFormatter(false),
 	// 	)(
 	// 		// slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{}),
 	// 		slog.NewJSONHandler(os.Stdout, nil),
@@ -105,14 +100,22 @@ func main() {
 		log.Fatal("OpenTelemetry protocol not specified")
 	}
 
-	res := resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.ServiceName(serviceName),
-		attribute.String("os", runtime.GOOS),
-		attribute.String("arch", runtime.GOARCH),
+	extraResources, _ := sdkresource.New(
+		ctx,
+		sdkresource.WithOS(),
+		sdkresource.WithProcess(),
+		sdkresource.WithContainer(),
+		sdkresource.WithHost(),
+		sdkresource.WithAttributes(
+			// semconv.SchemaURL,
+			semconv.ServiceName(serviceName)),
+	)
+	resource, _ := sdkresource.Merge(
+		sdkresource.Default(),
+		extraResources,
 	)
 
-	lp, err := initLogger(ctx, res, serviceName, protocol)
+	lp, err := initLogger(ctx, resource, serviceName, protocol)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -122,8 +125,7 @@ func main() {
 		}
 	}()
 
-
-	tp, err := initTracer(ctx, res, protocol)
+	tp, err := initTracer(ctx, resource, protocol)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -133,7 +135,7 @@ func main() {
 		}
 	}()
 
-	mp, err := initMeter(ctx, res, protocol)
+	mp, err := initMeter(ctx, resource, protocol)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -153,7 +155,7 @@ func main() {
 	if err = host.Start(host.WithMeterProvider(mp)); err != nil {
 		log.Fatal(err)
 	}
-		
+
 	router := setupRouter(serviceName)
 
 	port := os.Getenv("EXPOSE_PORT")
@@ -163,4 +165,3 @@ func main() {
 	logger.Info("Starting server")
 	router.Run(fmt.Sprintf(":%s", port))
 }
-
