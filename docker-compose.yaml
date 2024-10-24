@@ -4,18 +4,6 @@
 
 ---
 services:
-
-  loki:
-    image: grafana/loki:3.2.0
-    container_name: loki
-    entrypoint: /usr/bin/loki
-    command: ["-config.file=/etc/loki/config.yaml"]
-    volumes:
-    - ./etc/loki/config.yaml:/etc/loki/config.yaml
-    - loki-data:/loki
-    networks:
-    - opentelemetry-lab
-
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.100.0
     container_name: otel
@@ -27,6 +15,34 @@ services:
     - "4317:4317" # OTLP gRPC receiver
     - "4318:4318" # OTLP http receiver
     - "8889:8889" # Prometheus metrics exporter
+    networks:
+    - opentelemetry-lab
+
+  alloy:
+    image: grafana/alloy:v1.4.0
+    container_name: alloy
+    command:
+    - "run"
+    - "--server.http.listen-addr=0.0.0.0:12345"
+    - '--config.extra-args="-config.expand-env"'
+    - "/conf/config.alloy"
+    volumes:
+    - ./etc/alloy/config.alloy:/conf/config.alloy
+    ports:
+    - "12345:12345"
+    environment:
+    - ALLOY_PORT_APP_RECEIVER=12345
+    networks:
+    - opentelemetry-lab
+
+  loki:
+    image: grafana/loki:3.2.0
+    container_name: loki
+    entrypoint: /usr/bin/loki
+    command: ["-config.file=/etc/loki/config.yaml"]
+    volumes:
+    - ./etc/loki/config.yaml:/etc/loki/config.yaml
+    - loki-data:/loki
     networks:
     - opentelemetry-lab
 
@@ -58,7 +74,7 @@ services:
     - opentelemetry-lab
 
   grafana:
-    image: grafana/grafana:11.2.1
+    image: grafana/grafana:11.3.0
     container_name: grafana
     ports:
     - "3000:3000"
@@ -174,7 +190,7 @@ services:
     build: ./apps/otel-swift/
     container_name: otel-swift
     ports:
-    - '9191:9191'
+    - "9191:9191"
     environment:
     - EXPOSE_PORT=9191
     - TARGET_ONE_SVC=http://otel-rust:9999
@@ -187,6 +203,44 @@ services:
     - OTEL_SERVICE_NAME=otel-swift
     - LOG_LEVEL=debug
     command: ["serve", "--env", "production", "--hostname", "0.0.0.0", "--port", "9191"]
+
+  otel-ts:
+    build: ./apps/otel-ts/
+    container_name: otel-ts
+    ports:
+    - "3333:3333"
+    environment:
+    - EXPOSE_PORT=3333
+    - TARGET_ONE_SVC=http://otel-gp:8888
+    - TARGET_TWO_SVC=http://otel-rust:9999
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    - OTEL_TRACES_EXPORTER=otlp
+    - OTEL_METRICS_EXPORTER=otlp
+    - OTEL_LOGS_EXPORTER=otlp
+    - OTEL_SERVICE_NAME=otel-ts
+    command: "node --require '@opentelemetry/auto-instrumentations-node/register' dist/index.js"
+    networks:
+    - opentelemetry-lab
+
+  otel-react:
+    build: ./apps/otel-react/
+    container_name: otel-react
+    ports:
+    - "3434:3434"
+    environment:
+    - PORT=3434
+    - TARGET_ONE_SVC=http://otel-js:3001
+    - TARGET_TWO_SVC=http://otel-java:8080
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    - OTEL_TRACES_EXPORTER=otlp
+    - OTEL_METRICS_EXPORTER=otlp
+    - OTEL_LOGS_EXPORTER=otlp
+    - OTEL_SERVICE_NAME=otel-react
+    command: ""
+    networks:
+    - opentelemetry-lab
 
 volumes:
   tempo-data:

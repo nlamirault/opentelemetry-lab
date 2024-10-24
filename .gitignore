@@ -7,3 +7,27 @@ Cargo.lock
 
 # Swift
 .build/
+apps/otel-rust/debug/
+apps/otel-rust/target/
+Cargo.lock
+*.rs.bk
+
+# Go
+apps/otel-go/otel-go
+
+# Java
+apps/otel-java/.classpath
+apps/otel-java/.factorypath
+apps/otel-java/.project
+apps/otel-java/.settings/
+apps/otel-java/target/
+
+# Javascript
+apps/otel-js/node_modules
+
+# Typescript
+apps/otel-ts/dist
+apps/otel-ts/src/node_modules
+
+# React
+apps/otel-react/node_modules

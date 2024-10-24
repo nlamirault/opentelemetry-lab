@@ -1,0 +1,17 @@
+// Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+//
+// SPDX-License-Identifier: Apache-2.0
+
+{
+  "compilerOptions": {
+    "sourceMap": true,
+    "outDir": "dist",
+    "strict": true,
+    "lib": ["esnext"],
+    "esModuleInterop": true,
+    "allowJs": true,
+    "types": ["long"]
+  },
+  "include": ["src/**/*"]
+  // "exclude": ["src/xxx/**/*"]
+}
