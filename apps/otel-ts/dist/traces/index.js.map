@@ -1,5 +1,0 @@
-// Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
-//
-// SPDX-License-Identifier: Apache-2.0
-
-{"version":3,"file":"index.js","sourceRoot":"","sources":["../../src/traces/index.ts"],"names":[],"mappings":";;;AAAA,+BAA6D;AAApD,qGAAA,aAAa,OAAA;AAAE,4GAAA,oBAAoB,OAAA;AAE5C,mCAAqC;AAA5B,mGAAA,SAAS,OAAA"}

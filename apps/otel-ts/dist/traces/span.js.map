@@ -1,5 +1,0 @@
-// Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
-//
-// SPDX-License-Identifier: Apache-2.0
-
-{"version":3,"file":"span.js","sourceRoot":"","sources":["../../src/traces/span.ts"],"names":[],"mappings":";;AAGA,sCAEC;AAED,oDAEC;AATD,0CAA2C;AAG3C,SAAgB,aAAa;IAC3B,OAAO,WAAK,CAAC,aAAa,EAAE,CAAC;AAC/B,CAAC;AAED,SAAgB,oBAAoB;;IAClC,OAAO,MAAA,aAAa,EAAE,0CAAE,WAAW,EAAE,CAAC;AACxC,CAAC"}

@@ -1,5 +1,0 @@
-// Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
-//
-// SPDX-License-Identifier: Apache-2.0
-
-{"version":3,"file":"routes.js","sourceRoot":"","sources":["../../src/routes/routes.ts"],"names":[],"mappings":";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;AAIA,wCAiBC;AArBD,mCAA0C;AAE1C,wDAAwD;AAExD,SAAsB,cAAc,CAAC,GAAY;;;;YACzC,YAAY,GAAG,IAAA,gBAAM,GAAE,CAAC;YAC9B,mCAAmC;YACnC,kCAAkC;YAClC,wCAAwC;YACxC,4CAA4C;YAC5C,4CAA4C;YAC5C,YAAY,CAAC,GAAG,CAAC,GAAG,EAAE,UAAC,OAAO,EAAE,QAAQ;gBACtC,QAAQ,CAAC,IAAI,CAAC,gCAAgC,CAAC,CAAC;YAClD,CAAC,CAAC,CAAC;YACH,YAAY,CAAC,GAAG,CAAC,UAAU,EAAE,UAAC,OAAO,EAAE,QAAQ;gBAC7C,QAAQ,CAAC,IAAI,CAAC;oBACZ,OAAO,EAAE,QAAQ;iBAClB,CAAC,CAAC;YACL,CAAC,CAAC,CAAC;YACH,GAAG,CAAC,GAAG,CAAC,YAAY,CAAC,CAAC;YACtB,sBAAO,YAAY,EAAC;;;CACrB"}
