@@ -39,3 +39,8 @@ repos:
     - --comment-style
     - '//'
     # - --remove-header
+- repo: https://github.com/spinergie/pre-commit-dprint
+  rev: v0.45.0
+  hooks:
+  - id: dprint
+    stages: [commit]
