@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 const opentelemetry = require("@opentelemetry/sdk-node");
-const {
-  getNodeAutoInstrumentations,
-} = require("@opentelemetry/auto-instrumentations-node");
+// const {
+//   getNodeAutoInstrumentations,
+// } = require("@opentelemetry/auto-instrumentations-node");
 const { DiagConsoleLogger, DiagLogLevel, diag } = require("@opentelemetry/api");
 // const { W3CTraceContextPropagator } = require("@opentelemetry/core");
 const logsAPI = require("@opentelemetry/api-logs");
@@ -45,6 +45,7 @@ const {
 } = require("@opentelemetry/sdk-logs");
 const {
   BasicTracerProvider,
+  BatchSpanProcessor,
   ConsoleSpanExporter,
   SimpleSpanProcessor,
 } = require("@opentelemetry/sdk-trace-base");
@@ -63,24 +64,21 @@ const serviceName = process.env.OTEL_SERVICE_NAME || "otel-js";
 const resource = Resource.default().merge(
   new Resource({
     [SemanticResourceAttributes.SERVICE_NAME]: serviceName,
-    [SemanticResourceAttributes.SERVICE_NAMESPACE]:
-      process.env.SERVICE_NAMESPACE || "otel_lab",
+    [SemanticResourceAttributes.SERVICE_NAMESPACE]: process.env.SERVICE_NAMESPACE || "otel_lab",
   }),
 );
 
-const otelEndpoint =
-  process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://otel_collector:4317";
+const otelEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://otel_collector:4317";
 
 let logExporter;
 switch (process.env.OTEL_EXPORTER_OTLP_PROTOCOL) {
   case "grpc":
     logExporter = new otlpLogGrpc.OTLPLogExporter({
       url: otelEndpoint,
-      keepAlive: true,
     });
     break;
   case "http":
-    exporter = new otlpLogHttp.OTLPLogExporter({
+    logExporter = new otlpLogHttp.OTLPLogExporter({
       url: otelEndpoint,
       keepAlive: true,
     });
@@ -108,7 +106,6 @@ switch (process.env.OTEL_EXPORTER_OTLP_PROTOCOL) {
   case "grpc":
     metricExporter = new otlpMetricGrpc.OTLPMetricExporter({
       url: otelEndpoint,
-      keepAlive: true,
     });
     break;
   case "http":
@@ -119,8 +116,8 @@ switch (process.env.OTEL_EXPORTER_OTLP_PROTOCOL) {
     break;
   default:
     console.log(
-      "OpenTelemetry metrics invalid protocol: " +
-        process.env.OTEL_METRICS_EXPORTER,
+      "OpenTelemetry metrics invalid protocol: "
+        + process.env.OTEL_METRICS_EXPORTER,
     );
 }
 const metricReader = new PeriodicExportingMetricReader({
@@ -138,7 +135,6 @@ switch (process.env.OTEL_EXPORTER_OTLP_PROTOCOL) {
   case "grpc":
     traceExporter = new otlpTraceGrpc.OTLPTraceExporter({
       url: otelEndpoint,
-      keepAlive: true,
     });
     break;
   case "http":
@@ -149,12 +145,13 @@ switch (process.env.OTEL_EXPORTER_OTLP_PROTOCOL) {
     break;
   default:
     console.log(
-      "OpenTelemetry traces invalid protocol: " +
-        process.env.OTEL_TRACES_EXPORTER,
+      "OpenTelemetry traces invalid protocol: "
+        + process.env.OTEL_TRACES_EXPORTER,
     );
 }
 
-const spanProcessor = new SimpleSpanProcessor(traceExporter);
+// const spanProcessor = new SimpleSpanProcessor(traceExporter);
+const spanProcessor = new BatchSpanProcessor(traceExporter);
 // use SDK instead
 // const tracerProvider = new BasicTracerProvider({
 //   resource: resource,
@@ -255,8 +252,7 @@ app.get("/cpu_task", (req, res) => {
 
 app.get("/random_status", (req, res) => {
   const statusCodes = [200, 200, 300, 400, 500];
-  const randomStatusCode =
-    statusCodes[Math.floor(Math.random() * statusCodes.length)];
+  const randomStatusCode = statusCodes[Math.floor(Math.random() * statusCodes.length)];
   res.status(randomStatusCode);
   logger.info("random status");
   res.json({ path: "/random_status" });
