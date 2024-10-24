@@ -16,3 +16,4 @@ apps/otel-java/target/
 
 # Javascript
 apps/otel-js/node_modules
+apps/otel-ts/node_modules
