@@ -1,0 +1,1 @@
+export { initializeOpenTelemetry } from "./initialize";

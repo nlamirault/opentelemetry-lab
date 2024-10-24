@@ -1,0 +1,5 @@
+// Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+//
+// SPDX-License-Identifier: Apache-2.0
+
+{"version":3,"file":"tracer.js","sourceRoot":"","sources":["../../src/traces/tracer.ts"],"names":[],"mappings":";;AAKA,8BAEC;AAPD,0CAA2C;AAG3C,IAAM,WAAW,GAAG,OAAO,CAAC,GAAG,CAAC,iBAAiB,IAAI,SAAS,CAAC;AAE/D,SAAgB,SAAS;IACvB,OAAO,WAAK,CAAC,SAAS,CAAC,WAAW,EAAE,OAAO,CAAC,CAAC;AAC/C,CAAC"}

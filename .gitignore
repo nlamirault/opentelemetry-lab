@@ -16,4 +16,12 @@ apps/otel-java/target/
 
 # Javascript
 apps/otel-js/node_modules
-apps/otel-ts/node_modules
+apps/otel-js/package-lock.json
+
+# Typescript
+apps/otel-ts/package-lock.json
+apps/otel-ts/dist
+apps/otel-ts/src/node_modules
+
+# React
+apps/otel-react/node_modules

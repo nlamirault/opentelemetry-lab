@@ -1,0 +1,5 @@
+// Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+//
+// SPDX-License-Identifier: Apache-2.0
+
+{"version":3,"file":"logger.js","sourceRoot":"","sources":["../../src/logger/logger.ts"],"names":[],"mappings":";;;AAIA,8BAEC;AAFD,SAAgB,SAAS,CAAC,SAAiB;IACzC,cAAM,GAAG,SAAS,CAAC;AACrB,CAAC"}
