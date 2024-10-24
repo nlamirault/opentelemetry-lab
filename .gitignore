@@ -1,4 +1,12 @@
 # Rust
+debug/
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# Swift
+.build/
 apps/otel-rust/debug/
 apps/otel-rust/target/
 Cargo.lock
