@@ -1,6 +1,6 @@
-# Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
-#
-# SPDX-License-Identifier: Apache-2.0
+// Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+//
+// SPDX-License-Identifier: Apache-2.0
 
 package main
 
@@ -46,7 +46,7 @@ func chainHandler(ctx *gin.Context) {
 	}
 
 	client := http.Client{Timeout: time.Duration(1) * time.Second}
-    if err := httpCall(client, serviceOne); err != nil {
+	if err := httpCall(client, serviceOne); err != nil {
 		slog.Error(err.Error())
 	}
 	if err := httpCall(client, serviceTwo); err != nil {
