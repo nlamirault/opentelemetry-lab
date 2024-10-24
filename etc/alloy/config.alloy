@@ -1,0 +1,38 @@
+faro.receiver "integrations_app_agent_receiver" {
+	extra_log_labels = {
+		app  = env("DEMO_CLIENT_PACKAGE_NAME"),
+		kind = "",
+	}
+
+	server {
+		listen_address           = "0.0.0.0"
+		listen_port              = env("ALLOY_PORT_APP_RECEIVER")
+		cors_allowed_origins     = ["*"]
+		max_allowed_payload_size = "10MiB"
+
+		rate_limiting {
+			rate = 50
+		}
+	}
+
+	sourcemaps { }
+
+	output {
+		// logs   = [loki.process.logs_process_client.receiver]
+		traces = [otelcol.exporter.otlp.trace_write.input]
+	}
+}
+
+otelcol.exporter.otlp "trace_write" {
+	retry_on_failure {
+		max_elapsed_time = "1m0s"
+	}
+
+	client {
+		endpoint = format("%s:%s", env("TEMPO_HOST"), env("TEMPO_PORT_OTLP_RECEIVER"))
+
+		tls {
+			insecure = true
+		}
+	}
+}
