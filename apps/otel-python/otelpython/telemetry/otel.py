@@ -7,7 +7,7 @@ from otelpython import version
 def create_resource(service_name):
     return resources.Resource.create(
         {
-            resource.ResourceAttributes.SERVICE_NAME: service_name,
+            resource.SERVICE_NAME: service_name,
             resources.SERVICE_VERSION: version.RELEASE,
         }
     )
