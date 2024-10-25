@@ -37,6 +37,7 @@ func setupRouter(serviceName string) *gin.Engine {
 		c.String(http.StatusOK, "ok")
 	})
 	router.GET("/", rootHandler)
+	router.GET("/version", versionHandler)
 	router.GET("/chain", chainHandler)
 	return router
 }

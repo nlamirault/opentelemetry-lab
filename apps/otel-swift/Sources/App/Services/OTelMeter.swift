@@ -11,11 +11,11 @@ import Vapor
 
 class OpenTelemetryMeter {
     static let instance: OpenTelemetryMeter = OpenTelemetryMeter()
-    
+
     private init() {}
-    
+
     private var isInitialized = false
-    
+
     func initialize(endpoint: String?) throws -> Void {
         guard isInitialized == false else { return }
         isInitialized = true
@@ -28,7 +28,7 @@ class OpenTelemetryMeter {
         )
 
         var metricExporter: MetricExporter
-        let otelProtocol: String? = Environment.get("OTEL_METRICS_EXPORTER")
+        let otelProtocol: String? = Environment.get("OTEL_EXPORTER_OTLP_PROTOCOL")
         switch otelProtocol {
         case "grpc":
             guard let endpointURL: URL = URL(string: endpoint ?? "http://localhost:4317"), let host: String = endpointURL.host, let port: Int = endpointURL.port else {

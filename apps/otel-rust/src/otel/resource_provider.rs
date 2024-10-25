@@ -7,9 +7,7 @@ use std::time::Duration;
 use opentelemetry::KeyValue;
 use opentelemetry_sdk::{
     resource::{
-        EnvResourceDetector,
-        ResourceDetector,
-        SdkProvidedResourceDetector,
+        EnvResourceDetector, ResourceDetector, SdkProvidedResourceDetector,
         TelemetryResourceDetector,
     },
     Resource,
@@ -26,6 +24,6 @@ pub fn create_resource(service_name: &'static str) -> Resource {
         .merge(&telemetry_resource)
         .merge(&Resource::new(vec![
             KeyValue::new(resource::SERVICE_NAME, service_name),
-            KeyValue::new(resource::SERVICE_VERSION, env!("CARGO_PKG_VERSION"))
+            KeyValue::new(resource::SERVICE_VERSION, env!("CARGO_PKG_VERSION")),
         ]))
 }

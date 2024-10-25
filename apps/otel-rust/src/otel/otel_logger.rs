@@ -4,19 +4,43 @@
 
 use std::time::Duration;
 
+use opentelemetry::logs::LogError;
 use opentelemetry_appender_log::OpenTelemetryLogBridge;
-use opentelemetry_otlp::{Protocol, WithExportConfig, ExportConfig};
-use opentelemetry_sdk::Resource;
+use opentelemetry_otlp::{ExportConfig, Protocol, WithExportConfig};
 use opentelemetry_sdk::logs::LoggerProvider;
-use opentelemetry::logs::{LogError};
-
+use opentelemetry_sdk::Resource;
 
 pub fn create_logger(
-    resource: &Resource,
-    endpoint: String
+    resource: Resource,
+    endpoint: String,
+    protocol: String,
 ) -> Result<opentelemetry_sdk::logs::LoggerProvider, LogError> {
-
     let log_stdout_exporter = opentelemetry_stdout::LogExporter::default();
+
+    let otlp_exporter: opentelemetry_otlp::LogExporterBuilder = match protocol.as_str() {
+        "grpc" => opentelemetry_otlp::new_exporter()
+            .tonic()
+            .with_export_config(ExportConfig {
+                endpoint: endpoint.to_string(),
+                timeout: Duration::from_secs(3),
+                protocol: Protocol::Grpc,
+            })
+            .into(),
+        "http" => opentelemetry_otlp::new_exporter()
+            .http()
+            .with_export_config(ExportConfig {
+                endpoint: endpoint.to_string(),
+                timeout: Duration::from_secs(3),
+                protocol: Protocol::HttpBinary,
+            })
+            .into(),
+        &_ => {
+            return Err(LogError::Other(
+                "OpenTelemetry protocol is not supported".into(),
+            ))
+        }
+    };
+
     let logger_provider = LoggerProvider::builder()
         .with_resource(resource.clone())
         .with_simple_exporter(log_stdout_exporter)
@@ -26,12 +50,6 @@ pub fn create_logger(
     let otel_log_appender = OpenTelemetryLogBridge::new(&logger_provider);
     log::set_boxed_logger(Box::new(otel_log_appender)).unwrap();
     log::set_max_level(log::Level::Debug.to_level_filter());
-
-    let export_config = ExportConfig {
-            endpoint: endpoint.to_string(),
-            timeout: Duration::from_secs(3),
-            protocol: Protocol::Grpc
-        };
 
     opentelemetry_otlp::new_pipeline()
         .logging()
@@ -43,8 +61,6 @@ pub fn create_logger(
                 .build(),
         )
         .with_resource(resource.clone())
-        .with_exporter(opentelemetry_otlp::new_exporter()
-            .tonic()
-            .with_export_config(export_config))
+        .with_exporter(otlp_exporter)
         .install_batch(opentelemetry_sdk::runtime::Tokio)
 }

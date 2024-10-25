@@ -31,17 +31,12 @@ fn opentelemetry(service_name: &'static str) -> anyhow::Result<()> {
 
     let default_endpoint = "http://localhost:4317".to_string();
     let endpoint = env::var("OTEL_EXPORTER_OTLP_ENDPOINT").unwrap_or(default_endpoint);
-
+    let protocol = env::var("OTEL_EXPORTER_OTLP_PROTOCOL").unwrap_or("http".to_string());
     let resource = create_resource(service_name);
 
-    // Logging
-    let logger_provider = create_logger(&resource, endpoint.clone()).expect("failed to initialize logger");
-
-    // Tracing
-    let tracer_provider = create_tracer(&resource, endpoint.clone()).expect("failed to initialize tracer");
-
-    global::set_text_map_propagator(TraceContextPropagator::new());
-    global::set_tracer_provider(tracer_provider.clone());
+    let logger_provider = create_logger(resource.clone(), endpoint.clone(), protocol.clone()).expect("failed to initialize logger");
+    let meter_provider = create_meter(resource.clone(), endpoint.clone(), protocol.clone()).expect("failed to initialize meter");
+    let tracer_provider = create_tracer(resource.clone(), endpoint.clone(), protocol.clone()).expect("failed to initialize tracer");
 
     let tracer = tracer_provider.tracer("ttembed");
     let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
@@ -53,12 +48,20 @@ fn opentelemetry(service_name: &'static str) -> anyhow::Result<()> {
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    // Metrics
-    let meter_provider = create_meter(resource, endpoint.clone()).expect("failed to initialize meter");
-
+    global::set_text_map_propagator(TraceContextPropagator::new());
+    global::set_tracer_provider(tracer_provider.clone());
     global::set_meter_provider(meter_provider.clone());
 
     Ok(())
+}
+
+
+async fn handler_root() -> &'static str {
+    log::info!("Root handler");
+    let tracer = global::tracer("otel-rust");
+    let mut span = tracer.start("root_handler");
+    span.set_attribute(KeyValue::new("path", "/".to_string()));
+    "OpenTelemetry Lab / Rust"
 }
 
 async fn handler_health() -> axum::Json<Value> {
@@ -66,12 +69,9 @@ async fn handler_health() -> axum::Json<Value> {
     axum::Json(json!({ "status": "ok" }))
 }
 
-async fn handler_root() -> axum::Json<Value> { // &'static str {
-    log::info!("Root handler");
-    let tracer = global::tracer("otel-rust");
-    let mut span = tracer.start("root_handler");
-    span.set_attribute(KeyValue::new("path", "/".to_string()));
-    axum::Json(json!({ "app": "OpenTelemetry with Rust" }))
+async fn handler_version() -> axum::Json<Value> {
+    log::info!("Version handler");
+    axum::Json(json!({ "version": "v1.0.0" }))
 }
 
 async fn handler_chain() -> axum::Json<Value> {
@@ -122,6 +122,7 @@ async fn main() {
     let app = Router::new()
         .route("/", routing::get(handler_root))
         .route("/chain", routing::get(handler_chain))
+        .route("/version", routing::get(handler_version))
         .route("/health", routing::get(handler_health));
 
     log::info!("booting up server");

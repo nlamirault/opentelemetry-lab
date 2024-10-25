@@ -100,6 +100,7 @@ services:
     - TARGET_TWO_SVC=http://otel-java:8080
     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
     - OTEL_EXPORTER_OTLP_INSECURE=true
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
     - OTEL_TRACES_EXPORTER=otlp
     - OTEL_METRICS_EXPORTER=otlp
     - OTEL_LOGS_EXPORTER=otlp
@@ -186,23 +187,23 @@ services:
     networks:
     - opentelemetry-lab
 
-  otel-swift:
-    build: ./apps/otel-swift/
-    container_name: otel-swift
-    ports:
-    - "9191:9191"
-    environment:
-    - EXPOSE_PORT=9191
-    - TARGET_ONE_SVC=http://otel-rust:9999
-    - TARGET_TWO_SVC=http://otel-js:3001
-    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-    - OTEL_TRACES_EXPORTER=otlp
-    - OTEL_METRICS_EXPORTER=otlp
-    - OTEL_LOGS_EXPORTER=otlp
-    - OTEL_SERVICE_NAME=otel-swift
-    - LOG_LEVEL=debug
-    command: ["serve", "--env", "production", "--hostname", "0.0.0.0", "--port", "9191"]
+  # otel-swift:
+  #   build: ./apps/otel-swift/
+  #   container_name: otel-swift
+  #   ports:
+  #   - "9191:9191"
+  #   environment:
+  #   - EXPOSE_PORT=9191
+  #   - TARGET_ONE_SVC=http://otel-rust:9999
+  #   - TARGET_TWO_SVC=http://otel-js:3001
+  #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+  #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+  #   - OTEL_TRACES_EXPORTER=otlp
+  #   - OTEL_METRICS_EXPORTER=otlp
+  #   - OTEL_LOGS_EXPORTER=otlp
+  #   - OTEL_SERVICE_NAME=otel-swift
+  #   - LOG_LEVEL=debug
+  #   command: ["serve", "--env", "production", "--hostname", "0.0.0.0", "--port", "9191"]
 
   otel-ts:
     build: ./apps/otel-ts/

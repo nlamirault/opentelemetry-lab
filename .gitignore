@@ -31,3 +31,7 @@ apps/otel-ts/src/node_modules
 
 # React
 apps/otel-react/node_modules
+
+# Python
+.venv
+**/__pycache__/
