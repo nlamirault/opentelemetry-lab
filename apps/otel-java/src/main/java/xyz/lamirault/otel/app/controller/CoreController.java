@@ -61,13 +61,16 @@ public class CoreController {
   }
 
   @GetMapping("/")
-  public String root(
-    @RequestParam(value = "name", defaultValue = "World") String name,
-    @RequestHeader HttpHeaders headers
-  ) {
-    logger.warn(headers.toString());
-    logger.info(String.format("Hello %s!!", name));
-    return String.format("Hello %s!!", name);
+  public String root(@RequestHeader HttpHeaders headers) {
+    logger.info("[handler] root");
+    logger.info(headers.toString());
+    return String.format("OpenTelemetry Lab / Java");
+  }
+
+  @GetMapping("/version")
+  public String version(@RequestHeader HttpHeaders headers) {
+    logger.info("[handler] version");
+    return String.format("{\"version\": \"v1.0.0\"}");
   }
 
   @GetMapping("/core")
@@ -132,11 +135,13 @@ public class CoreController {
   public String chain(
     @RequestParam(value = "name", defaultValue = "World") String name
   ) throws InterruptedException, IOException {
+    logger.info("[handler] chain");
+
     String TARGET_ONE_SVC = System.getenv()
       .getOrDefault("TARGET_ONE_SVC", "http://localhost:8080");
     String TARGET_TWO_SVC = System.getenv()
       .getOrDefault("TARGET_TWO_SVC", "http://localhost:8080");
-    logger.debug(
+    logger.info(
       String.format(
         "chain is starting for %s %s",
         TARGET_ONE_SVC,
