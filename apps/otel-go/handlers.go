@@ -5,7 +5,6 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -15,24 +14,14 @@ import (
 )
 
 func rootHandler(ctx *gin.Context) {
-	if len(ctx.Query("fail")) > 0 {
-		ctx.String(http.StatusInternalServerError, "An error occurs")
-		return
-	}
+	slog.Info("[handler] Root")
 	slog.Debug("Handling request", "URI", ctx.Request.RequestURI)
-	version := os.Getenv("VERSION")
-	output := os.Getenv("MESSAGE")
-	if len(output) == 0 {
-		output = "This is a silly demo"
-	}
-	if len(version) > 0 {
-		output = fmt.Sprintf("%s version %s", output, version)
-	}
-	if len(ctx.Query("html")) > 0 {
-		output = fmt.Sprintf("<h1>%s</h1>", output)
-	}
-	output = fmt.Sprintf("%s\n", output)
-	ctx.String(http.StatusOK, output)
+	ctx.String(http.StatusOK, "OpenTelemetry Lab / Go")
+}
+
+func versionHandler(ctx *gin.Context) {
+	slog.Info("[handler] Version")
+	ctx.JSON(http.StatusOK, gin.H{"version": "v1.0.0"})
 }
 
 func chainHandler(ctx *gin.Context) {
