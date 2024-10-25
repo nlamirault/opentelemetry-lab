@@ -17,13 +17,22 @@ log = "0.4.22"
 opentelemetry = { version = "0.26.0", features = ["metrics", "trace"] }
 opentelemetry-appender-log = "0.26.0"
 opentelemetry-appender-tracing = "0.26.0"
+opentelemetry-http = "0.26.0"
 opentelemetry-otlp = { version = "0.26.0", features = [
-    "metrics",
-    "grpc-tonic",
+  "logs",
+  "metrics",
+  "grpc-tonic",
+  "reqwest-client",
+  "http-proto",
+  "trace",
 ] }
 opentelemetry-semantic-conventions = "0.26.0"
 opentelemetry-stdout = { version = "0.26.0", features = ["trace"] }
-opentelemetry_sdk = { version = "0.26.0", features = ["async-std", "rt-tokio"] }
+opentelemetry_sdk = { version = "0.26.0", features = [
+  "async-std",
+  "rt-tokio",
+  "trace",
+] }
 reqwest = "0.12.8"
 serde_json = "1.0.128"
 tokio = { version = "1.0", features = ["full"] }

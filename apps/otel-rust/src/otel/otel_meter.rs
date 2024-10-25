@@ -4,28 +4,41 @@
 
 use std::time::Duration;
 
-use opentelemetry_sdk::Resource;
+use opentelemetry::metrics::MetricsError;
+use opentelemetry_otlp::{ExportConfig, Protocol, WithExportConfig};
 use opentelemetry_sdk::metrics::reader::DefaultTemporalitySelector;
-use opentelemetry::metrics::{MetricsError};
-use opentelemetry_otlp::{Protocol, WithExportConfig, ExportConfig};
-
+use opentelemetry_sdk::Resource;
 
 pub fn create_meter(
     resource: Resource,
-    endpoint: String
+    endpoint: String,
+    protocol: String,
 ) -> Result<opentelemetry_sdk::metrics::SdkMeterProvider, MetricsError> {
-    let meter_export_config = ExportConfig {
+    let export_config = ExportConfig {
         endpoint: endpoint,
         timeout: Duration::from_secs(3),
-        protocol: Protocol::Grpc
+        protocol: Protocol::Grpc,
+    };
+
+    let otlp_exporter: opentelemetry_otlp::MetricsExporterBuilder = match protocol.as_str() {
+        "grpc" => opentelemetry_otlp::new_exporter()
+            .tonic()
+            .with_export_config(export_config)
+            .into(),
+        "http" => opentelemetry_otlp::new_exporter()
+            .http()
+            .with_export_config(export_config)
+            .into(),
+        &_ => {
+            return Err(MetricsError::Other(
+                "OpenTelemetry protocol is not supported".into(),
+            ))
+        }
     };
 
     opentelemetry_otlp::new_pipeline()
         .metrics(opentelemetry_sdk::runtime::Tokio)
-        .with_exporter(opentelemetry_otlp::new_exporter()
-            .tonic()
-            .with_export_config(meter_export_config),
-        )
+        .with_exporter(otlp_exporter)
         .with_resource(resource.clone())
         .with_period(Duration::from_secs(3))
         .with_timeout(Duration::from_secs(10))
