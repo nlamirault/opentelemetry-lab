@@ -28,7 +28,7 @@ class OpenTelemetryLogger {
         )
 
         var logExporter: LogRecordExporter
-        let otelProtocol: String? = Environment.get("OTEL_LOGS_EXPORTER")
+        let otelProtocol: String? = Environment.get("OTEL_EXPORTER_OTLP_PROTOCOL")
         switch otelProtocol {
         case "grpc":
             guard let endpointURL: URL = URL(string: endpoint ?? "http://localhost:4317"), let host: String = endpointURL.host, let port: Int = endpointURL.port else {
