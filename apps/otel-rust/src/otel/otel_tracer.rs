@@ -13,20 +13,22 @@ pub fn create_tracer(
     endpoint: String,
     protocol: String,
 ) -> Result<opentelemetry_sdk::trace::TracerProvider, TraceError> {
-    let export_config = ExportConfig {
-        endpoint: endpoint.to_string(),
-        timeout: Duration::from_secs(3),
-        protocol: Protocol::Grpc,
-    };
-
     let otlp_exporter: opentelemetry_otlp::SpanExporterBuilder = match protocol.as_str() {
         "grpc" => opentelemetry_otlp::new_exporter()
             .tonic()
-            .with_export_config(export_config)
+            .with_export_config(ExportConfig {
+                endpoint: endpoint.to_string(),
+                timeout: Duration::from_secs(3),
+                protocol: Protocol::Grpc,
+            })
             .into(),
         "http" => opentelemetry_otlp::new_exporter()
             .http()
-            .with_export_config(export_config)
+            .with_export_config(ExportConfig {
+                endpoint: endpoint.to_string(),
+                timeout: Duration::from_secs(3),
+                protocol: Protocol::HttpBinary,
+            })
             .into(),
         &_ => {
             return Err(TraceError::Other(
