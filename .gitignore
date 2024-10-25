@@ -34,4 +34,4 @@ apps/otel-react/node_modules
 
 # Python
 .venv
-apps/otel-python/otelpython/telemetry/__pycache__/
+**/__pycache__/
