@@ -115,21 +115,11 @@ classes: {
     icon: https://grafana.com/static/img/menu/grafana-tempo.svg
     shape: image
   }
-  # pyroscope: {
-  #     label: Pyroscope
-  #     icon: https://grafana.com/static/img/pyroscope-logo.svg
-  #     shape: image
-  # }
-
-  # container-registry: {
-  #   label: Container Registry
-  #   # square corners
-  #   # icon: https://icons.terrastruct.com/aws%2FCompute%2FAmazon-EC2-Container-Registry.svg
-  #   # round corners
-  #   # icon: https://diagrams.mingrammer.com/img/resources/aws/compute/ec2-container-registry.png
-  #   icon: https://icons.terrastruct.com/gcp%2FProducts%20and%20services%2FDeveloper%20Tools%2FContainer%20Registry.svg
-  #   shape: image
-  # }
+  pyroscope: {
+      label: Pyroscope
+      icon: https://grafana.com/static/img/pyroscope-logo.svg
+      shape: image
+  }
 
   dash: {
     style.stroke-dash: 5
@@ -153,9 +143,9 @@ docker: docker {
     tempo.class: tempo
   }
 
-  # profiling: Profiling {
-  #     pyroscope.class: pyroscope
-  # }
+  profiling: Profiling {
+    pyroscope.class: pyroscope
+  }
 
   otel: OpenTelemetry {
     otel_collector.class: opentelemetry
@@ -166,17 +156,9 @@ docker: docker {
     otel_collector -> _.monitoring.prometheus: {class: dash}
     otel_collector -> _.logging.loki: {class: dash}
     otel_collector -> _.tracing.tempo: {class: dash}
-    # alloy -> _.profiling.pyroscope {class: dash}
+    otel_collector -> _.profiling.pyroscope: {class: dash}
     alloy -> otel_collector: {class: dash}
-  }
-
-  observability: Observability {
-    grafana.class: grafana
-
-    grafana -> _.monitoring.prometheus
-    grafana -> _.logging.loki
-    grafana -> _.tracing.tempo
-    # grafana -> _.profiling.pyroscope
+    # alloy -> _.profiling.pyroscope: {class: dash}
   }
 
   apps: Appslications {
@@ -197,6 +179,15 @@ docker: docker {
     python -> _.otel.otel_collector
     swift -> _.otel.otel_collector
     react -> _.otel.alloy
+  }
+
+  observability: Observability {
+    grafana.class: grafana
+
+    grafana -> _.monitoring.prometheus
+    grafana -> _.logging.loki
+    grafana -> _.tracing.tempo
+    grafana -> _.profiling.pyroscope
   }
 }
 
