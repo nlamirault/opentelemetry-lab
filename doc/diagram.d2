@@ -4,11 +4,11 @@
 #       OpenTelemetry Lab
 # ===================================== #
 
-vars: {
-  d2-config: {
-    layout-engine: elk
-  }
-}
+# vars: {
+#   d2-config: {
+#     layout-engine: elk
+#   }
+# }
 
 direction: down
 
@@ -137,67 +137,66 @@ classes: {
   }
 }
 
-lab: Lab {
-  docker: docker {
-    docker.class: docker
+docker: docker {
+  docker.class: docker
 
-    monitoring: Monitoring {
-      prometheus.class: prometheus
-      # mimir.class: mimir
-    }
+  monitoring: Monitoring {
+    prometheus.class: prometheus
+    # mimir.class: mimir
+  }
 
-    logging: Logging {
-      loki.class: loki
-    }
+  logging: Logging {
+    loki.class: loki
+  }
 
-    tracing: Tracing {
-      tempo.class: tempo
-    }
+  tracing: Tracing {
+    tempo.class: tempo
+  }
 
-    # profiling: Profiling {
-    #     pyroscope.class: pyroscope
-    # }
+  # profiling: Profiling {
+  #     pyroscope.class: pyroscope
+  # }
 
-    otel: OpenTelemetry {
-      otel_collector.class: opentelemetry
-      otel_collector.label: OpenTelemetry Collector
+  otel: OpenTelemetry {
+    otel_collector.class: opentelemetry
+    otel_collector.label: OpenTelemetry Collector
 
-      alloy.class: alloy
+    alloy.class: alloy
 
-      otel_collector -> _.monitoring.prometheus: {class: dash}
-      otel_collector -> _.logging.loki: {class: dash}
-      otel_collector -> _.tracing.tempo: {class: dash}
-      # alloy -> _.profiling.pyroscope {class: dash}
-      alloy -> otel_collector: {class: dash}
-    }
+    otel_collector -> _.monitoring.prometheus: {class: dash}
+    otel_collector -> _.logging.loki: {class: dash}
+    otel_collector -> _.tracing.tempo: {class: dash}
+    # alloy -> _.profiling.pyroscope {class: dash}
+    alloy -> otel_collector: {class: dash}
+  }
 
-    observability: Observability {
-      grafana.class: grafana
+  observability: Observability {
+    grafana.class: grafana
 
-      grafana -> _.monitoring.prometheus
-      grafana -> _.logging.loki
-      grafana -> _.tracing.tempo
-      # grafana -> _.profiling.pyroscope
-    }
+    grafana -> _.monitoring.prometheus
+    grafana -> _.logging.loki
+    grafana -> _.tracing.tempo
+    # grafana -> _.profiling.pyroscope
+  }
 
-    apps: Appslications {
-      go.class: go
-      rust.class: rust
-      java.class: java
-      python.class: python
-      javascript.class: javascript
-      typescript.class: typescript
-      swift.class: swift
-      react.class: react
+  apps: Appslications {
+    go.class: go
+    rust.class: rust
+    java.class: java
+    python.class: python
+    javascript.class: javascript
+    typescript.class: typescript
+    swift.class: swift
+    react.class: react
 
-      go -> _.otel.otel_collector
-      rust -> _.otel.otel_collector
-      javascript -> _.otel.otel_collector
-      typescript -> _.otel.otel_collector
-      java -> _.otel.otel_collector
-      python -> _.otel.otel_collector
-      swift -> _.otel.otel_collector
-      react -> _.otel.alloy
-    }
+    go -> _.otel.otel_collector
+    rust -> _.otel.otel_collector
+    javascript -> _.otel.otel_collector
+    typescript -> _.otel.otel_collector
+    java -> _.otel.otel_collector
+    python -> _.otel.otel_collector
+    swift -> _.otel.otel_collector
+    react -> _.otel.alloy
   }
 }
+
