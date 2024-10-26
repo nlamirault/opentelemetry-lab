@@ -2,5 +2,5 @@
 
 ## Architecture
 
-![Architecture](doc/diagram.svg)
+![Architecture](doc/diagram.png)
 
