@@ -1,0 +1,203 @@
+# !/usr/bin/env d2
+
+# ===================================== #
+#       OpenTelemetry Lab
+# ===================================== #
+
+vars: {
+  d2-config: {
+    layout-engine: elk
+  }
+}
+
+direction: down
+
+title: {
+  label: OpenTelemetry Lab / Architecture
+  near: top-center
+  shape: text
+  style.font-size: 40
+  style.underline: true
+}
+
+classes: {
+  docker: {
+    label: Docker
+    icon: https://icons.terrastruct.com/dev%2Fdocker.svg
+    shape: image
+  }
+
+  # apps
+
+  go: {
+    label: Go
+    icon: https://icons.terrastruct.com/dev%2Fgo.svg
+    shape: image
+  }
+
+  rust: {
+    label: Rust
+    icon: https://icons.terrastruct.com/dev%2Frust.svg
+    shape: image
+  }
+
+  java: {
+    label: Java
+    icon: https://icons.terrastruct.com/dev%2Fjava.svg
+    shape: image
+  }
+
+  typescript: {
+    label: Typescript
+    icon: https://icons.terrastruct.com/dev%2Ftypescript.svg
+    shape: image
+  }
+
+  javascript: {
+    label: Javascript
+    icon: https://icons.terrastruct.com/dev%2Fjavascript.svg
+    shape: image
+  }
+
+  python: {
+    label: Python
+    icon: https://icons.terrastruct.com/dev%2Fpython.svg
+    shape: image
+  }
+
+  swift: {
+    label: Swift
+    icon: https://icons.terrastruct.com/dev%2Fswift.svg
+    shape: image
+  }
+
+  react: {
+    label: React
+    icon: https://icons.terrastruct.com/dev%2Freact.svg
+    shape: image
+  }
+
+  # Observability
+
+  opentelemetry: {
+    label: OpenTelemetry
+    icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/opentelemetry/icon/color/opentelemetry-icon-color.svg
+    shape: image
+  }
+  alloy: {
+    label: Grafana Alloy
+    icon: https://raw.githubusercontent.com/grafana/alloy/main/docs/sources/assets/alloy_icon_orange.svg
+    shape: image
+  }
+
+  # Visualizer
+
+  grafana: {
+    label: Grafana
+    icon: https://diagrams.mingrammer.com/img/resources/onprem/monitoring/grafana.png
+    shape: image
+  }
+
+  # Telemetry
+
+  prometheus: {
+    label: Prometheus
+    icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/prometheus/icon/color/prometheus-icon-color.svg
+    shape: image
+  }
+  loki: {
+    label: Loki
+    icon: https://grafana.com/static/img/menu/loki.svg
+    shape: image
+  }
+  tempo: {
+    label: Tempo
+    icon: https://grafana.com/static/img/menu/grafana-tempo.svg
+    shape: image
+  }
+  # pyroscope: {
+  #     label: Pyroscope
+  #     icon: https://grafana.com/static/img/pyroscope-logo.svg
+  #     shape: image
+  # }
+
+  # container-registry: {
+  #   label: Container Registry
+  #   # square corners
+  #   # icon: https://icons.terrastruct.com/aws%2FCompute%2FAmazon-EC2-Container-Registry.svg
+  #   # round corners
+  #   # icon: https://diagrams.mingrammer.com/img/resources/aws/compute/ec2-container-registry.png
+  #   icon: https://icons.terrastruct.com/gcp%2FProducts%20and%20services%2FDeveloper%20Tools%2FContainer%20Registry.svg
+  #   shape: image
+  # }
+
+  dash: {
+    style.stroke-dash: 5
+    style.animated: true
+  }
+}
+
+lab: Lab {
+  docker: docker {
+    docker.class: docker
+
+    monitoring: Monitoring {
+      prometheus.class: prometheus
+      # mimir.class: mimir
+    }
+
+    logging: Logging {
+      loki.class: loki
+    }
+
+    tracing: Tracing {
+      tempo.class: tempo
+    }
+
+    # profiling: Profiling {
+    #     pyroscope.class: pyroscope
+    # }
+
+    otel: OpenTelemetry {
+      otel_collector.class: opentelemetry
+      otel_collector.label: OpenTelemetry Collector
+
+      alloy.class: alloy
+
+      otel_collector -> _.monitoring.prometheus: {class: dash}
+      otel_collector -> _.logging.loki: {class: dash}
+      otel_collector -> _.tracing.tempo: {class: dash}
+      # alloy -> _.profiling.pyroscope {class: dash}
+      alloy -> otel_collector: {class: dash}
+    }
+
+    observability: Observability {
+      grafana.class: grafana
+
+      grafana -> _.monitoring.prometheus
+      grafana -> _.logging.loki
+      grafana -> _.tracing.tempo
+      # grafana -> _.profiling.pyroscope
+    }
+
+    apps: Appslications {
+      go.class: go
+      rust.class: rust
+      java.class: java
+      python.class: python
+      javascript.class: javascript
+      typescript.class: typescript
+      swift.class: swift
+      react.class: react
+
+      go -> _.otel.otel_collector
+      rust -> _.otel.otel_collector
+      javascript -> _.otel.otel_collector
+      typescript -> _.otel.otel_collector
+      java -> _.otel.otel_collector
+      python -> _.otel.otel_collector
+      swift -> _.otel.otel_collector
+      react -> _.otel.alloy
+    }
+  }
+}
