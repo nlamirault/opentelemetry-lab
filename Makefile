@@ -59,3 +59,7 @@ docker-run: guard-APP guard-PORTS ## Execute the Docker image
 		-e OTEL_EXPORTER_OTLP_PROTOCOL=http \
 		-p $(PORTS) \
 		opentelemetry-lab/otel-$(APP):latest
+
+.PHONE: d2-build
+d2-build: ## Generate architecture diagram
+	@d2 doc/diagram.d2
