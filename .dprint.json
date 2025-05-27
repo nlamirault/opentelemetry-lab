@@ -1,13 +1,16 @@
-// Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
-//
-// SPDX-License-Identifier: Apache-2.0
-
 {
   "lineWidth": 100,
   "json": {
     "indentWidth": 2
   },
-  "markdown": {},
+  "markdown": {
+    "lineWidth": 80
+  },
+  "ruff": {
+    "indentWidth": 4,
+    "indentStyle": "space",
+    "lineLength": 120
+  },
   "toml": {},
   "yaml": {
     "indentWidth": 2,
@@ -24,6 +27,10 @@
       {
         "command": "java -jar formatter.jar {{file_path}}",
         "exts": ["java"]
+      },
+      {
+        "command": "shfmt",
+        "exts": ["sh", "bash"]
       }
     ]
   },
