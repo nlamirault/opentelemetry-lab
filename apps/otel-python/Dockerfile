@@ -12,15 +12,15 @@ ENV UV_LINK_MODE=copy
 
 # Install the project's dependencies using the lockfile and settings
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --frozen --no-install-project --no-dev
+  --mount=type=bind,source=uv.lock,target=uv.lock \
+  --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+  uv sync --frozen --no-install-project --no-dev
 RUN uv run opentelemetry-bootstrap -a install
 
 # Then, add the rest of the project source code and install it
 ADD . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
+  uv sync --frozen --no-dev
 
 ENV PATH="/app/.venv/bin:$PATH"
 
@@ -29,7 +29,7 @@ ENTRYPOINT []
 
 # CMD ["fastapi", "dev", "--host", "0.0.0.0", "app.py"]
 CMD [ \
-    "opentelemetry-instrument", \
-    "uvicorn", "server:app", \
-    # "--reload", "--reload-dir", "./" , \
-    "--host", "0.0.0.0", "--port", "8000"]
+  "opentelemetry-instrument", \
+  "uvicorn", "main:app", \
+  # "--reload", "--reload-dir", "./" , \
+  "--host", "0.0.0.0", "--port", "8000"]

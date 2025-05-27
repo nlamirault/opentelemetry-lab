@@ -18,8 +18,10 @@ from otelpython import settings
 
 LOGGER = logging.getLogger(__name__)
 
+app = None
 
-if __name__ == "__main__":
+
+def run():
     logger.setup(settings.SERVICE_NAME, settings.OTLP_ENDPOINT, settings.OTLP_PROTOCOL)
     tracer.setup(settings.SERVICE_NAME, settings.OTLP_ENDPOINT, settings.OTLP_PROTOCOL)
     meter.setup(settings.SERVICE_NAME, settings.OTLP_ENDPOINT, settings.OTLP_PROTOCOL)
@@ -30,3 +32,7 @@ if __name__ == "__main__":
         logging_format="%(asctime)s %(levelname)s [%(name)s] [%(filename)s:%(lineno)d] [trace_id=%(otelTraceID)s span_id=%(otelSpanID)s resource.service.name=%(otelServiceName)s trace_sampled=%(otelTraceSampled)s] - %(message)s"
     )
     uvicorn.run(app, host="0.0.0.0", port=settings.EXPOSE_PORT)
+
+
+if __name__ == "__main__":
+    run()

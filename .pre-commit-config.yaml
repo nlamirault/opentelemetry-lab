@@ -44,3 +44,11 @@ repos:
   hooks:
   - id: dprint
     stages: [commit]
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.11.8
+  hooks:
+    # Run the linter
+    - id: ruff
+      args: [ --fix ]
+    # Run the formatter
+    - id: ruff-format
