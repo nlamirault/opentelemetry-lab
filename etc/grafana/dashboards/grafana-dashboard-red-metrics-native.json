@@ -1,7 +1,3 @@
-# Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
-#
-# SPDX-License-Identifier: Apache-2.0
-
 {
   "annotations": {
     "list": [
@@ -444,23 +440,15 @@
   ],
   "refresh": "",
   "schemaVersion": 39,
-  "tags": [
-    "otel",
-    "opentelemetry",
-    "otlp"
-  ],
+  "tags": ["otel", "opentelemetry", "otlp"],
   "templating": {
     "list": [
       {
         "allValue": ".+",
         "current": {
           "selected": true,
-          "text": [
-            "All"
-          ],
-          "value": [
-            "$__all"
-          ]
+          "text": ["All"],
+          "value": ["$__all"]
         },
         "datasource": {
           "type": "prometheus",
@@ -487,12 +475,8 @@
         "allValue": ".+",
         "current": {
           "selected": true,
-          "text": [
-            "All"
-          ],
-          "value": [
-            "$__all"
-          ]
+          "text": ["All"],
+          "value": ["$__all"]
         },
         "datasource": {
           "type": "prometheus",
