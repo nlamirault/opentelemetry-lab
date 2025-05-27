@@ -13,4 +13,4 @@ router = fastapi.APIRouter()
 @router.get("/version", tags=["version"])
 async def version_handler():
     LOGGER.info("[handler] Version")
-    return {"version": version.RELEASE}
+    return {"version": version.version_info}
