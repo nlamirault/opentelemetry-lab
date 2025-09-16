@@ -1,3 +1,4 @@
+// import packageJson from '../../package.json';
 import {
   diag,
   // Context,
@@ -46,14 +47,15 @@ export function initializeOpenTelemetry() {
   const resource = Resource.default().merge(
     new Resource({
       [ATTR_SERVICE_NAME]: serviceName,
+      // [ATTR_SERVICE_VERSION]: packageJson.version,
       [ATTR_SERVICE_VERSION]: "1.0.0",
     }),
   );
 
-  const otelEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://otel_collector:4317";
+  const otelEndpoint = process.env.'OTEL_EXPORTER_OTLP_ENDPOINT' || "http://otel_collector:4318";
 
   const logExporter = process.env.OTEL_EXPORTER_OTLP_PROTOCOL === "HTTP"
-    ? new HTTPOTLPLogExporter({ url: otelEndpoint, keepAlive: true })
+    ? new HTTPOTLPLogExporter({ url: otelEndpoint + "/v1/logs", keepAlive: true })
     : new GRPCOTLPLogExporter({ url: otelEndpoint });
 
   const logRecordProcessor = new BatchLogRecordProcessor(logExporter);
@@ -63,7 +65,7 @@ export function initializeOpenTelemetry() {
   loggerProvider.addLogRecordProcessor(logRecordProcessor);
 
   const metricExporter = process.env.OTEL_EXPORTER_OTLP_PROTOCOL === "HTTP"
-    ? new HTTPOTLPMetricExporter({ url: otelEndpoint, keepAlive: true })
+    ? new HTTPOTLPMetricExporter({ url: otelEndpoint + "/v1/metrics", keepAlive: true })
     : new GRPCOTLPMetricExporter({ url: otelEndpoint });
   const metricReader = new PeriodicExportingMetricReader({
     exporter: metricExporter,
@@ -71,7 +73,7 @@ export function initializeOpenTelemetry() {
   });
 
   const traceExporter = process.env.OTEL_EXPORTER_OTLP_PROTOCOL === "HTTP"
-    ? new HTTPOTLPTraceExporter({ url: otelEndpoint, keepAlive: true })
+    ? new HTTPOTLPTraceExporter({ url: otelEndpoint + "/v1/traces", keepAlive: true })
     : new GRPCOTLPTraceExporter({ url: otelEndpoint });
   const spanProcessor = new BatchSpanProcessor(traceExporter);
 

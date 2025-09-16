@@ -180,9 +180,21 @@ const setup_opentelemetry = function () {
   diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
 
   const res = createResource(serviceName);
-  const loggerProvider = setupLogger(res, otlpEndpoint, otlpProtocol);
-  const tracerProvider = setupTracer(res, otlpEndpoint, otlpProtocol);
-  const meterProvider = setupMeter(res, otlpEndpoint, otlpProtocol);
+  const loggerProvider = setupLogger(
+    res,
+    otlpEndpoint + "/v1/logs",
+    otlpProtocol,
+  );
+  const tracerProvider = setupTracer(
+    res,
+    otlpEndpoint + "/v1/traces",
+    otlpProtocol,
+  );
+  const meterProvider = setupMeter(
+    res,
+    otlpEndpoint + "/v1/metrics",
+    otlpProtocol,
+  );
 
   const sdk = new opentelemetry.NodeSDK({
     instrumentations: [
