@@ -14,17 +14,19 @@ import (
 )
 
 func rootHandler(ctx *gin.Context) {
-	slog.Info("[handler] Root")
-	slog.Debug("Handling request", "URI", ctx.Request.RequestURI)
+	slog.InfoContext(ctx, "Root")
+	slog.DebugContext(ctx, "Handling request", "URI", ctx.Request.RequestURI)
 	ctx.String(http.StatusOK, "OpenTelemetry Lab / Go")
 }
 
 func versionHandler(ctx *gin.Context) {
-	slog.Info("[handler] Version")
+	slog.InfoContext(ctx, "Retrieve Version")
 	ctx.JSON(http.StatusOK, gin.H{"version": "v1.0.0"})
 }
 
 func chainHandler(ctx *gin.Context) {
+	slog.InfoContext(ctx, "Chain request")
+
 	serviceOne := "http://localhost:9999"
 	if os.Getenv("TARGET_ONE_SVC") != "" {
 		serviceOne = os.Getenv("TARGET_ONE_SVC")
@@ -35,10 +37,14 @@ func chainHandler(ctx *gin.Context) {
 	}
 
 	client := http.Client{Timeout: time.Duration(1) * time.Second}
+
+	slog.InfoContext(ctx, "Call to service", "server", serviceOne)
 	if err := httpCall(client, serviceOne); err != nil {
-		slog.Error(err.Error())
+		slog.ErrorContext(ctx, "Service call fails", "service", serviceOne, "error", err.Error())
 	}
+
+	slog.InfoContext(ctx, "Call to service", "server", serviceTwo)
 	if err := httpCall(client, serviceTwo); err != nil {
-		slog.Error(err.Error())
+		slog.ErrorContext(ctx, "Service call fails", "service", serviceTwo, "error", err.Error())
 	}
 }

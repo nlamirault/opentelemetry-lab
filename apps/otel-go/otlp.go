@@ -6,25 +6,81 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log/slog"
+	"os"
 
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagation"
-
-	// stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/log/global"
+	"go.opentelemetry.io/otel/propagation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
+
+const (
+	ENV_OTEL_DEBUG = "OTEL_DEBUG"
+)
+
+func initLogger(ctx context.Context, resource *resource.Resource, serviceName string, protocol string) (*sdklog.LoggerProvider, error) {
+	var otlpExporter sdklog.Exporter
+	var err error
+	switch protocol {
+	case "http":
+		otlpExporter, err = otlploghttp.New(ctx)
+		if err != nil {
+			return nil, err
+		}
+	case "grpc":
+		fmt.Printf("OpenTelemetry with GRPC")
+		otlpExporter, err = otlploggrpc.New(ctx)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("unsupported protocol: %s", protocol)
+	}
+
+	var provider *sdklog.LoggerProvider
+	if os.Getenv(ENV_OTEL_DEBUG) != "" {
+		stdoutExporter, err := stdoutlog.New()
+		if err != nil {
+			return nil, err
+		}
+
+		provider = sdklog.NewLoggerProvider(
+			sdklog.WithProcessor(sdklog.NewBatchProcessor(otlpExporter)),
+			sdklog.WithProcessor(sdklog.NewSimpleProcessor(stdoutExporter)),
+			sdklog.WithResource(resource),
+		)
+	} else {
+		provider = sdklog.NewLoggerProvider(
+			sdklog.WithProcessor(sdklog.NewBatchProcessor(otlpExporter)),
+			sdklog.WithResource(resource),
+		)
+	}
+
+	// defer provider.Shutdown(ctx)
+
+	global.SetLoggerProvider(provider)
+	logger := otelslog.NewLogger(serviceName, otelslog.WithLoggerProvider(provider))
+	slog.SetDefault(logger)
+
+	slog.InfoContext(ctx, "OpenTelemetry logger provider done", "service", serviceName)
+	return provider, nil
+}
 
 func initTracer(ctx context.Context, resource *resource.Resource, protocol string) (*sdktrace.TracerProvider, error) {
 	// stdoutExporter, err := stdout.New(stdout.WithPrettyPrint())
@@ -49,49 +105,32 @@ func initTracer(ctx context.Context, resource *resource.Resource, protocol strin
 		return nil, fmt.Errorf("unsupported protocol: %s", protocol)
 	}
 
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithBatcher(otlpExporter),
-		// sdktrace.WithBatcher(stdoutExporter),
-		sdktrace.WithResource(resource),
-	)
-
-	otel.SetTracerProvider(tp)
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
-	return tp, nil
-}
-
-func initLogger(ctx context.Context, resource *resource.Resource, serviceName string, protocol string) (*sdklog.LoggerProvider, error) {
-	var otlpExporter sdklog.Exporter
-	var err error
-	switch protocol {
-	case "http":
-		otlpExporter, err = otlploghttp.New(ctx)
+	var provider *sdktrace.TracerProvider
+	if os.Getenv(ENV_OTEL_DEBUG) != "" {
+		stdoutExporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
 		if err != nil {
 			return nil, err
 		}
-	case "grpc":
-		otlpExporter, err = otlploggrpc.New(ctx)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, fmt.Errorf("unsupported protocol: %s", protocol)
+
+		provider = sdktrace.NewTracerProvider(
+			sdktrace.WithSampler(sdktrace.AlwaysSample()),
+			sdktrace.WithBatcher(otlpExporter),
+			sdktrace.WithBatcher(stdoutExporter),
+			sdktrace.WithResource(resource),
+		)
+	} else {
+		provider = sdktrace.NewTracerProvider(
+			sdktrace.WithSampler(sdktrace.AlwaysSample()),
+			sdktrace.WithBatcher(otlpExporter),
+			sdktrace.WithResource(resource),
+		)
 	}
 
-	lp := sdklog.NewLoggerProvider(
-		sdklog.WithProcessor(
-			sdklog.NewBatchProcessor(otlpExporter),
-		),
-		sdklog.WithResource(resource),
-	)
+	otel.SetTracerProvider(provider)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 
-	defer lp.Shutdown(ctx)
-
-	global.SetLoggerProvider(lp)
-	logger := otelslog.NewLogger(serviceName)
-	logger.Debug("Something interesting happened")
-	return lp, nil
+	slog.InfoContext(ctx, "OpenTelemetry tracer provider done")
+	return provider, nil
 }
 
 func initMeter(ctx context.Context, resource *resource.Resource, protocol string) (*sdkmetric.MeterProvider, error) {
@@ -112,14 +151,32 @@ func initMeter(ctx context.Context, resource *resource.Resource, protocol string
 		return nil, fmt.Errorf("unsupported protocol: %s", protocol)
 	}
 
-	mp := sdkmetric.NewMeterProvider(
-		sdkmetric.WithResource(resource),
-		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(otlpExporter)))
-	// sdkmetric.WithReader(sdkmetric.NewPeriodicReader(otlpExporter)))
-	if err != nil {
-		return nil, err
+	var provider *sdkmetric.MeterProvider
+	if os.Getenv(ENV_OTEL_DEBUG) != "" {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		stdoutExporter, err := stdoutmetric.New(
+			stdoutmetric.WithEncoder(enc),
+			stdoutmetric.WithoutTimestamps(),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		provider = sdkmetric.NewMeterProvider(
+			sdkmetric.WithResource(resource),
+			sdkmetric.WithReader(sdkmetric.NewPeriodicReader(otlpExporter)),
+			sdkmetric.WithReader(sdkmetric.NewPeriodicReader(stdoutExporter)),
+		)
+	} else {
+		provider = sdkmetric.NewMeterProvider(
+			sdkmetric.WithResource(resource),
+			sdkmetric.WithReader(sdkmetric.NewPeriodicReader(otlpExporter)),
+		)
 	}
 
-	otel.SetMeterProvider(mp)
-	return mp, nil
+	otel.SetMeterProvider(provider)
+
+	slog.InfoContext(ctx, "OpenTelemetry tracer provider done")
+	return provider, nil
 }

@@ -34,6 +34,7 @@ func setupRouter(serviceName string) *gin.Engine {
 	router.Use(otelgin.Middleware(serviceName))
 
 	router.GET("/health", func(c *gin.Context) {
+		slog.Info("Health status")
 		c.String(http.StatusOK, "ok")
 	})
 	router.GET("/", rootHandler)
@@ -64,11 +65,11 @@ func httpError(err error, span oteltrace.Span, ctx *gin.Context, status int) {
 func main() {
 	ctx := context.Background()
 
-	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
-		AddSource: true,
-		Level:     slog.LevelDebug,
-	}))
-	slog.SetDefault(logger)
+	// logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
+	// 	AddSource: true,
+	// 	Level:     slog.LevelDebug,
+	// }))
+	// slog.SetDefault(logger)
 
 	// log.SetOutput(os.Stderr)
 	// if os.Getenv("DEBUG") == "true" {
@@ -92,7 +93,7 @@ func main() {
 
 	serviceName := "otel-go"
 	if os.Getenv("OTEL_SERVICE_NAME") != "" {
-		slog.Info("Use OTEL_SERVICE_NAME variable")
+		// slog.Info("Use OTEL_SERVICE_NAME variable")
 		serviceName = os.Getenv("OTEL_SERVICE_NAME")
 	}
 
@@ -163,6 +164,6 @@ func main() {
 	if len(port) == 0 {
 		port = "8888"
 	}
-	logger.Info("Starting server")
+	slog.InfoContext(ctx, "Starting server")
 	router.Run(fmt.Sprintf(":%s", port))
 }
