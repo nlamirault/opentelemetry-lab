@@ -11,7 +11,6 @@ use opentelemetry_sdk::{
     resource::ResourceDetector,
     resource::SdkProvidedResourceDetector,
     resource::TelemetryResourceDetector,
-    // },
     Resource,
 };
 use opentelemetry_semantic_conventions::resource;
@@ -34,12 +33,4 @@ pub fn create_resource() -> Resource {
             env!("CARGO_PKG_VERSION"),
         ))
         .build()
-
-    //     sdk_resource
-    //         .merge(&env_resource)
-    //         .merge(&telemetry_resource)
-    //         .merge(&Resource::new(vec![
-    //             KeyValue::new(resource::SERVICE_NAME, service_name),
-    //             KeyValue::new(resource::SERVICE_VERSION, env!("CARGO_PKG_VERSION")),
-    //         ]))
 }

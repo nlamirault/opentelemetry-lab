@@ -1,6 +1,9 @@
+// Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+//
+// SPDX-License-Identifier: Apache-2.0
+
 use std::time::Duration;
 
-use opentelemetry_appender_log::OpenTelemetryLogBridge;
 use opentelemetry_otlp::{ExportConfig, LogExporter, Protocol, WithExportConfig};
 use opentelemetry_sdk::logs::SdkLoggerProvider;
 use opentelemetry_sdk::Resource;
@@ -17,7 +20,7 @@ pub fn init_logger(resource: Resource, endpoint: String, protocol: String) -> Sd
                 protocol: Protocol::Grpc,
             })
             .build()
-            .expect("Failed to initialize logger provider"),
+            .expect("Failed to initialize OTLP logger exporter"),
         "http" => LogExporter::builder()
             .with_http()
             .with_export_config(ExportConfig {
@@ -26,7 +29,7 @@ pub fn init_logger(resource: Resource, endpoint: String, protocol: String) -> Sd
                 protocol: Protocol::HttpBinary,
             })
             .build()
-            .expect("Failed to initialize logger provider"),
+            .expect("Failed to initialize OTLP logger exporter"),
         &_ => panic!("unsupported OTLP protocol: {}", protocol),
     };
 
@@ -36,12 +39,7 @@ pub fn init_logger(resource: Resource, endpoint: String, protocol: String) -> Sd
         .with_resource(resource)
         .build();
 
-    // let _ = provider.shutdown();
-
-    // Setup Log Appender for the log crate.
-    let otel_log_appender = OpenTelemetryLogBridge::new(&provider);
-    log::set_boxed_logger(Box::new(otel_log_appender)).unwrap();
-    log::set_max_level(log::Level::Info.to_level_filter());
+    // Note: Log bridge setup moved to main.rs to avoid conflicts with tracing subscriber
 
     provider
 }

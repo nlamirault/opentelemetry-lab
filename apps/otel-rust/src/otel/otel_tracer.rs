@@ -1,3 +1,7 @@
+// Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+//
+// SPDX-License-Identifier: Apache-2.0
+
 use std::time::Duration;
 
 use opentelemetry_otlp::{ExportConfig, Protocol, SpanExporter, WithExportConfig};
@@ -14,7 +18,7 @@ pub fn init_tracer(resource: Resource, endpoint: String, protocol: String) -> Sd
                 protocol: Protocol::Grpc,
             })
             .build()
-            .expect("Failed to initialize logger provider"),
+            .expect("Failed to initialize OTLP tracer exporter"),
         "http" => SpanExporter::builder()
             .with_http()
             .with_export_config(ExportConfig {
@@ -23,13 +27,12 @@ pub fn init_tracer(resource: Resource, endpoint: String, protocol: String) -> Sd
                 protocol: Protocol::HttpBinary,
             })
             .build()
-            .expect("Failed to initialize logger provider"),
+            .expect("Failed to initialize OTLP tracer exporter"),
         &_ => panic!("unsupported OTLP protocol: {}", protocol),
     };
 
     let provider: SdkTracerProvider = SdkTracerProvider::builder()
         .with_batch_exporter(exporter)
-        // .with_simple_exporter(log_stdout_exporter)
         .with_resource(resource)
         .build();
 

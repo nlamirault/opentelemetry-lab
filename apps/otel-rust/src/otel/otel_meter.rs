@@ -1,3 +1,7 @@
+// Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+//
+// SPDX-License-Identifier: Apache-2.0
+
 use std::time::Duration;
 
 use opentelemetry_otlp::{ExportConfig, MetricExporter, Protocol, WithExportConfig};
@@ -14,7 +18,7 @@ pub fn init_meter(resource: Resource, endpoint: String, protocol: String) -> Sdk
                 protocol: Protocol::Grpc,
             })
             .build()
-            .expect("Failed to initialize logger provider"),
+            .expect("Failed to initialize OTLP meter exporter"),
         "http" => MetricExporter::builder()
             .with_http()
             .with_export_config(ExportConfig {
@@ -23,7 +27,7 @@ pub fn init_meter(resource: Resource, endpoint: String, protocol: String) -> Sdk
                 protocol: Protocol::HttpBinary,
             })
             .build()
-            .expect("Failed to initialize logger provider"),
+            .expect("Failed to initialize OTLP meter exporter"),
         &_ => panic!("unsupported OTLP protocol: {}", protocol),
     };
 
@@ -31,7 +35,6 @@ pub fn init_meter(resource: Resource, endpoint: String, protocol: String) -> Sdk
 
     let provider: SdkMeterProvider = SdkMeterProvider::builder()
         .with_reader(reader)
-        // .with_simple_exporter(log_stdout_exporter)
         .with_resource(resource)
         .build();
 
