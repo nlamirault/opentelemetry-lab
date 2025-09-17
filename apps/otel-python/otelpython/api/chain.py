@@ -25,7 +25,6 @@ async def chain_handler():
     )
 
     metrics.request_counter.add(1, {"target_service": "chain"})
-    logger.info(f"Tracer: {tracer}")
 
     with tracer.start_as_current_span(
         "chain_request",

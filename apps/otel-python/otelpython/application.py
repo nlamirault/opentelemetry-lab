@@ -4,7 +4,9 @@ import fastapi
 from fastapi import exceptions
 from fastapi import responses
 from opentelemetry import trace
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation import fastapi as otel_fastapi
+from opentelemetry.instrumentation import httpx as otel_httpx
+import prometheus_client
 
 from otelpython import version as app_version
 from otelpython.api import chain
@@ -26,7 +28,9 @@ def creates_app(service_name: str):
     app.include_router(chain.router)
     app.include_router(health.router)
     app.include_router(version.router)
-    FastAPIInstrumentor().instrument_app(app)  # .expose(app)
+    _setup_auto_instrumentation(app)
+    # Add Prometheus ASGI app directly at /metrics
+    app.mount("/metrics", prometheus_client.make_asgi_app())
     return app
 
 
@@ -50,3 +54,11 @@ def add_otel_exception_handler(app: fastapi.FastAPI):
         return responses.JSONResponse(
             status_code=exc.status_code, content={"detail": str(exc.detail)}
         )
+
+
+def _setup_auto_instrumentation(app: fastapi.FastAPI):
+    """Set up automatic instrumentation for libraries."""
+
+    otel_fastapi.FastAPIInstrumentor.instrument_app(app)
+    otel_httpx.HTTPXClientInstrumentor().instrument()
+    # AsyncPGInstrumentor().instrument()

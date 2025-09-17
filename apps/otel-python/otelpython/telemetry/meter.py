@@ -3,6 +3,7 @@ import os
 
 from opentelemetry.exporter.otlp.proto.grpc import metric_exporter as metric_exporter_grpc
 from opentelemetry.exporter.otlp.proto.grpc import metric_exporter as metric_exporter_http
+from opentelemetry.exporter import prometheus
 from opentelemetry.sdk import metrics as sdk_metrics
 from opentelemetry.sdk.metrics import export
 from opentelemetry import metrics
@@ -12,6 +13,8 @@ from otelpython import settings
 
 
 logger = logging.getLogger(__name__)
+
+prefix = "otel_python"
 
 
 def setup(resource: str, otlp_endpoint: str, otlp_protocol: str) -> metrics.Meter:
@@ -33,6 +36,7 @@ def setup(resource: str, otlp_endpoint: str, otlp_protocol: str) -> metrics.Mete
     logger.info("OTLP metrics configured")
 
     metrics_readers = []
+
     otlp_reader = export.PeriodicExportingMetricReader(otlp_metric_exporter)
     metrics_readers.append(otlp_reader)
 
@@ -41,6 +45,9 @@ def setup(resource: str, otlp_endpoint: str, otlp_protocol: str) -> metrics.Mete
         console_reader = export.PeriodicExportingMetricReader(console_metric_exporter)
         metrics_readers.append(console_reader)
         logger.info("Console metrics enabled")
+
+    prom_reader = prometheus.PrometheusMetricReader(prefix)
+    metrics_readers.append(prom_reader)
 
     meter_provider = sdk_metrics.MeterProvider(resource=resource, metric_readers=metrics_readers)
 
