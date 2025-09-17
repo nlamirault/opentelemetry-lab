@@ -1,4 +1,5 @@
 import logging
+import os
 
 from opentelemetry.exporter.otlp.proto.grpc import metric_exporter as metric_exporter_grpc
 from opentelemetry.exporter.otlp.proto.grpc import metric_exporter as metric_exporter_http
@@ -7,13 +8,15 @@ from opentelemetry.sdk.metrics import export
 from opentelemetry import metrics
 
 from otelpython import exceptions
-from otelpython.telemetry import otel
+from otelpython import settings
 from otelpython import version
 
 
-def setup(service_name, otlp_endpoint, otlp_protocol):
+logger = logging.getLogger(__name__)
+
+
+def setup(resource, otlp_endpoint, otlp_protocol):
     logging.info("Setup OpenTelemetry Meter")
-    res = otel.create_resource(service_name)
 
     otlp_metric_exporter = None
     if otlp_protocol == "http":
@@ -24,18 +27,24 @@ def setup(service_name, otlp_endpoint, otlp_protocol):
         raise exceptions.OpenTelemetryProtocolException(
             f"invalid OpenTelemetry protocol: {otlp_protocol}"
         )
+    logger.info("✅ OTLP metrics configured")
 
+    metrics_readers = []
     otlp_reader = export.PeriodicExportingMetricReader(otlp_metric_exporter)
+    metrics_readers.append(otlp_reader)
 
-    console_metric_exporter = export.ConsoleMetricExporter()
-    console_reader = export.PeriodicExportingMetricReader(console_metric_exporter)
+    if os.getenv("OTEL_ENABLE_CONSOLE", "false").lower() == "true":
+        console_metric_exporter = export.ConsoleMetricExporter()
+        console_reader = export.PeriodicExportingMetricReader(console_metric_exporter)
+        metrics_readers.append(console_reader)
+        logger.info("✅ Console metrics enabled")
 
-    meter_provider = sdk_metrics.MeterProvider(
-        resource=res, metric_readers=[otlp_reader, console_reader]
-    )
+    meter_provider = sdk_metrics.MeterProvider(resource=resource, metric_readers=metrics_readers)
+
     metrics.set_meter_provider(meter_provider)
+    logger.info("🔥 OpenTelemetry metrics initialized")
 
-    meter = metrics.get_meter_provider().get_meter(service_name, version.version_info)
+    meter = metrics.get_meter_provider().get_meter(settings.OTEL_SERVICE_NAME, version.version_info)
 
     counter = meter.create_counter("build_info")
     counter.add(1)

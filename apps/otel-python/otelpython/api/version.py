@@ -5,10 +5,12 @@ import fastapi
 from otelpython import version
 
 
+logger = logging.getLogger(__name__)
+
 router = fastapi.APIRouter()
 
 
 @router.get("/version", tags=["version"])
 async def version_handler():
-    logging.info("[handler] Version")
+    logger.info("[handler] Version")
     return {"version": version.version_info}

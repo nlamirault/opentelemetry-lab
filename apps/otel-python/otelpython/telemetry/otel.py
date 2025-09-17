@@ -1,5 +1,7 @@
+from opentelemetry import trace
 from opentelemetry.sdk import resources
 
+from otelpython import settings
 from otelpython import version
 
 
@@ -10,3 +12,8 @@ def create_resource(service_name):
             resources.SERVICE_VERSION: version.version_info,
         }
     )
+
+
+def get_tracer():
+    """Returns the OpenTelemetry tracer instance."""
+    return trace.get_tracer(settings.OTEL_SERVICE_NAME)  # , SERVICE_VERSION_VALUE)
