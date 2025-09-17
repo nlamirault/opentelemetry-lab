@@ -29,6 +29,7 @@ def setup(service_name, otlp_endpoint, otlp_protocol):
     logger_provider = sdk_logs.LoggerProvider(resource=res)
 
     logger_provider.add_log_record_processor(export.BatchLogRecordProcessor(otlp_log_exporter))
+
     console_log_exporter = export.ConsoleLogExporter()
     logger_provider.add_log_record_processor(export.SimpleLogRecordProcessor(console_log_exporter))
 
@@ -43,4 +44,4 @@ def setup(service_name, otlp_endpoint, otlp_protocol):
     logger = logging.getLogger()
     logger.addHandler(handler)
     logger.setLevel(logging.NOTSET)
-    logging.info("[otel] Setup logger")
+    logging.info("Setup OpenTelemetry Logger")

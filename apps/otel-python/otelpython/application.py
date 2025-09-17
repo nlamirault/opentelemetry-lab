@@ -8,8 +8,6 @@ from otelpython.api import health
 from otelpython.api import root
 from otelpython.api import version
 
-LOGGER = logging.getLogger(__name__)
-
 
 def creates_app(service_name):
     """Create the application
@@ -18,8 +16,8 @@ def creates_app(service_name):
         [fastapi.FastAPI]: the main application
     """
 
-    LOGGER.info("Create application %s", app_version.RELEASE)
-    app = fastapi.FastAPI(version=app_version.RELEASE, title=service_name)
+    logging.info("Create application %s", app_version.version_info)
+    app = fastapi.FastAPI(version=app_version.version_info, title=service_name)
     app.include_router(root.router)
     app.include_router(chain.router)
     app.include_router(health.router)

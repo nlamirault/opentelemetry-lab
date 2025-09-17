@@ -15,7 +15,7 @@ from otelpython.telemetry import otel
 
 
 def setup(service_name, otlp_endpoint, otlp_protocol):
-    logging.info("[otel] Setup tracer")
+    logging.info("Setup OpenTelemetry Tracer")
     res = otel.create_resource(service_name)
 
     otlp_span_exporter = None

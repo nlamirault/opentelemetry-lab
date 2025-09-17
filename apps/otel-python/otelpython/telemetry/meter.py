@@ -12,7 +12,7 @@ from otelpython import version
 
 
 def setup(service_name, otlp_endpoint, otlp_protocol):
-    logging.info("[otel] Setup meter")
+    logging.info("Setup OpenTelemetry Meter")
     res = otel.create_resource(service_name)
 
     otlp_metric_exporter = None
@@ -35,7 +35,7 @@ def setup(service_name, otlp_endpoint, otlp_protocol):
     )
     metrics.set_meter_provider(meter_provider)
 
-    meter = metrics.get_meter_provider().get_meter(service_name, version.RELEASE)
+    meter = metrics.get_meter_provider().get_meter(service_name, version.version_info)
 
     counter = meter.create_counter("build_info")
     counter.add(1)

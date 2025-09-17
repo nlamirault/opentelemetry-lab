@@ -22,10 +22,22 @@ app = None
 
 
 def run():
-    logger.setup(settings.SERVICE_NAME, settings.OTLP_ENDPOINT, settings.OTLP_PROTOCOL)
-    tracer.setup(settings.SERVICE_NAME, settings.OTLP_ENDPOINT, settings.OTLP_PROTOCOL)
-    meter.setup(settings.SERVICE_NAME, settings.OTLP_ENDPOINT, settings.OTLP_PROTOCOL)
-    app = application.creates_app(settings.SERVICE_NAME)
+    logger.setup(
+        settings.OTEL_SERVICE_NAME,
+        settings.OTEL_EXPORTER_OTLP_ENDPOINT,
+        settings.OTEL_EXPORTER_OTLP_PROTOCOL,
+    )
+    tracer.setup(
+        settings.OTEL_SERVICE_NAME,
+        settings.OTEL_EXPORTER_OTLP_ENDPOINT,
+        settings.OTEL_EXPORTER_OTLP_PROTOCOL,
+    )
+    meter.setup(
+        settings.OTEL_SERVICE_NAME,
+        settings.OTEL_EXPORTER_OTLP_ENDPOINT,
+        settings.OTEL_EXPORTER_OTLP_PROTOCOL,
+    )
+    app = application.creates_app(settings.OTEL_SERVICE_NAME)
     FastAPIInstrumentor().instrument_app(app)
     LoggingInstrumentor().instrument(set_logging_format=True)
     LoggingInstrumentor(
