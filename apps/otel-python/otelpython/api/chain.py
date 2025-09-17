@@ -19,7 +19,7 @@ tracer = otel.get_tracer()
 
 
 @router.get("/chain", tags=["chain"])
-async def chain_handler():
+async def chain_handler() -> dict[str, str]:
     logger.info(
         f"[handler] Chain Start using {settings.TARGET_ONE_SVC} and {settings.TARGET_TWO_SVC}"
     )

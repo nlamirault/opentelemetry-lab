@@ -22,7 +22,7 @@ tracer = otel.get_tracer()
 app = None
 
 
-def run():
+def run() -> None:
     resource = otel.create_resource(settings.OTEL_SERVICE_NAME)
     otel_logger.setup(
         resource,

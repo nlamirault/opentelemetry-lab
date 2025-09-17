@@ -3,8 +3,8 @@ import os
 
 from opentelemetry import trace
 from opentelemetry.sdk import trace as sdk_trace
+from opentelemetry.sdk import resources
 from opentelemetry.sdk.trace import export as trace_export
-
 from opentelemetry.exporter.otlp.proto.http import trace_exporter as trace_exporter_http
 from opentelemetry.exporter.otlp.proto.grpc import trace_exporter as trace_exporter_grpc
 
@@ -15,7 +15,7 @@ from otelpython import settings
 logger = logging.getLogger(__name__)
 
 
-def setup(resource: str, otlp_endpoint: str, otlp_protocol: str) -> trace.Tracer:
+def setup(resource: resources.Resource, otlp_endpoint: str, otlp_protocol: str) -> trace.Tracer:
     logging.info("Setup OpenTelemetry Tracer")
 
     otlp_span_exporter = None

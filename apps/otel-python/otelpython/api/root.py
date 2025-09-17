@@ -11,7 +11,7 @@ router = fastapi.APIRouter()
 
 
 @router.get("/", tags=["root"])
-async def root_handler():
+async def root_handler() -> str:
     logger.info("[handler] Version")
     metrics.request_counter.add(1, {"target_service": "root"})
     return "OpenTelemetry Lab / Python"

@@ -5,6 +5,7 @@ from opentelemetry.exporter.otlp.proto.grpc import metric_exporter as metric_exp
 from opentelemetry.exporter.otlp.proto.grpc import metric_exporter as metric_exporter_http
 from opentelemetry.exporter import prometheus
 from opentelemetry.sdk import metrics as sdk_metrics
+from opentelemetry.sdk import resources
 from opentelemetry.sdk.metrics import export
 from opentelemetry import metrics
 
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 prefix = "otel_python"
 
 
-def setup(resource: str, otlp_endpoint: str, otlp_protocol: str) -> metrics.Meter:
+def setup(resource: resources.Resource, otlp_endpoint: str, otlp_protocol: str) -> metrics.Meter:
     logging.info("Setup OpenTelemetry Meter")
 
     otlp_metric_exporter = None

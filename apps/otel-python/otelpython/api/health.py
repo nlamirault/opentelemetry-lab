@@ -10,7 +10,7 @@ router = fastapi.APIRouter()
 
 
 @router.get("/health", tags=["health"])
-async def health_handler():
+async def health_handler() -> dict[str, str]:
     logger.info("[handler] Version")
     metrics.request_counter.add(1, {"target_service": "health"})
     # request_counter.add(1, {"http.route": request.path})

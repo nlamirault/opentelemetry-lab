@@ -6,6 +6,7 @@ from opentelemetry.exporter.otlp.proto.grpc import _log_exporter as log_exporter
 from opentelemetry.exporter.otlp.proto.http import _log_exporter as log_exporter_http
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.sdk import _logs as sdk_logs
+from opentelemetry.sdk import resources
 from opentelemetry.sdk._logs import export
 from pythonjsonlogger import jsonlogger
 
@@ -15,7 +16,7 @@ from otelpython import exceptions
 # logger = logging.getLogger(__name__)
 
 
-def setup(resource: str, otlp_endpoint: str, otlp_protocol: str) -> logging.Logger:
+def setup(resource: resources.Resource, otlp_endpoint: str, otlp_protocol: str) -> None:
     otlp_log_exporter = None
     if otlp_protocol == "http":
         otlp_log_exporter = log_exporter_http.OTLPLogExporter(endpoint=otlp_endpoint, insecure=True)

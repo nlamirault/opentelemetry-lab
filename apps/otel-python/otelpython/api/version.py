@@ -11,7 +11,7 @@ router = fastapi.APIRouter()
 
 
 @router.get("/version", tags=["version"])
-async def version_handler():
+async def version_handler() -> dict[str, str]:
     logger.info("[handler] Version")
     metrics.request_counter.add(1, {"target_service": "version"})
     return {"version": version.version_info}

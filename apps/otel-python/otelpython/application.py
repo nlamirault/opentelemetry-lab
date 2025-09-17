@@ -15,7 +15,7 @@ from otelpython.api import root
 from otelpython.api import version
 
 
-def creates_app(service_name: str):
+def creates_app(service_name: str) -> fastapi.FastAPI:
     """Create the application
 
     Returns:
@@ -34,12 +34,12 @@ def creates_app(service_name: str):
     return app
 
 
-def add_otel_exception_handler(app: fastapi.FastAPI):
+def add_otel_exception_handler(app: fastapi.FastAPI) -> None:
     @app.exception_handler(exceptions.HTTPException)
     async def http_exception_handler(
-        request,  # dead: disable
-        exc,
-    ):  # dead: disable
+        request: fastapi.Request,
+        exc: exceptions.HTTPException,
+    ) -> responses.JSONResponse:
         current_span = trace.get_current_span()
         current_span.set_attributes(
             {
@@ -56,7 +56,7 @@ def add_otel_exception_handler(app: fastapi.FastAPI):
         )
 
 
-def _setup_auto_instrumentation(app: fastapi.FastAPI):
+def _setup_auto_instrumentation(app: fastapi.FastAPI) -> None:
     """Set up automatic instrumentation for libraries."""
 
     otel_fastapi.FastAPIInstrumentor.instrument_app(app)
