@@ -6,9 +6,9 @@ import httpx
 from opentelemetry import trace
 from opentelemetry.semconv.trace import SpanAttributes
 
-
 from otelpython.telemetry import metrics
 from otelpython.telemetry import otel
+from otelpython.telemetry import traces
 from otelpython import settings
 
 logger = logging.getLogger(__name__)
@@ -42,16 +42,19 @@ async def chain_handler():
                 try:
                     response = client.get("https://api.ipify.org?format=json", timeout=10.0)
                     response.raise_for_status()
-                    span_svc.set_status(response.status_code)
+                    span_svc.set_status(trace.StatusCode.OK)
                     logger.info(response.json())
                 except httpx.HTTPStatusError as err:
                     logger.warn(f"Response error: {err}")
-                    span_svc.set_status(trace.Status(trace.StatusCode.ERROR))
-                    span_svc.set_attribute(SpanAttributes.EXCEPTION_TYPE, "HTTPException")
-                    span_svc.set_attribute(SpanAttributes.EXCEPTION_MESSAGE, str(err))
-                    span_svc.set_attribute(
-                        SpanAttributes.EXCEPTION_STACKTRACE, "".join(traceback.format_stack())
+                    traces.set_span_error(
+                        span_svc, "HTTPException", str(err), "".join(traceback.format_stack())
                     )
+                    # span_svc.set_attribute(SpanAttributes.EXCEPTION_TYPE, "HTTPException")
+                    # span_svc.set_attribute(SpanAttributes.EXCEPTION_MESSAGE, str(err))
+                    # span_svc.set_attribute(
+                    #     SpanAttributes.EXCEPTION_STACKTRACE, "".join(traceback.format_stack())
+                    # )
+                    # span_svc.set_status(trace.Status(trace.StatusCode.ERROR))
 
             # with tracer.start_as_current_span(
             #     "call_service_one", kind=trace.SpanKind.CLIENT
@@ -62,14 +65,11 @@ async def chain_handler():
             #     try:
             #         response = client.get(f"http://{settings.TARGET_ONE_SVC}/", timeout=10.0)
             #         response.raise_for_status()
+            #         span_svc.set_status(trace.StatusCode.OK)
             #         logger.info(response.json())
             #     except httpx.HTTPStatusError as err:
             #         logger.warn(f"Response error: {err}")
-            #         span_svc_one.set_attribute(SpanAttributes.EXCEPTION_TYPE, "HTTPException")
-            #         span_svc_one.set_attribute(SpanAttributes.EXCEPTION_MESSAGE, str(err))
-            #         span_svc_one.set_attribute(
-            #             SpanAttributes.EXCEPTION_STACKTRACE, "".join(traceback.format_stack())
-            #         )
+            #         traces.set_span_error(span_svc, "HTTPException", str(err), "".join(traceback.format_stack()))
 
             # with tracer.start_as_current_span(
             #     "call_service_one", kind=trace.SpanKind.CLIENT
@@ -80,14 +80,11 @@ async def chain_handler():
             #     try:
             #         response = client.get(f"http://{settings.TARGET_TWO_SVC}/", timeout=10.0)
             #         response.raise_for_status()
+            #         span_svc.set_status(trace.StatusCode.OK)
             #         logger.info(response.json())
             #     except httpx.HTTPStatusError as err:
             #         logger.warn(f"Response error: {err}")
-            #         span_svc_one.set_attribute(SpanAttributes.EXCEPTION_TYPE, "HTTPException")
-            #         span_svc_one.set_attribute(SpanAttributes.EXCEPTION_MESSAGE, str(err))
-            #         span_svc_one.set_attribute(
-            #             SpanAttributes.EXCEPTION_STACKTRACE, "".join(traceback.format_stack())
-            #         )
+            #         traces.set_span_error(span_svc, "HTTPException", str(err), "".join(traceback.format_stack()))
 
-        logging.info("Chain Finished")
+        logger.info("Chain Finished")
         return {"path": "/chain"}
