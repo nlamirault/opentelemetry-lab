@@ -9,25 +9,28 @@ from opentelemetry import metrics
 
 from otelpython import exceptions
 from otelpython import settings
-from otelpython import version
 
 
 logger = logging.getLogger(__name__)
 
 
-def setup(resource, otlp_endpoint, otlp_protocol):
+def setup(resource: str, otlp_endpoint: str, otlp_protocol: str) -> metrics.Meter:
     logging.info("Setup OpenTelemetry Meter")
 
     otlp_metric_exporter = None
     if otlp_protocol == "http":
-        otlp_metric_exporter = metric_exporter_http.OTLPMetricExporter(endpoint=otlp_endpoint)
+        otlp_metric_exporter = metric_exporter_http.OTLPMetricExporter(
+            endpoint=otlp_endpoint, insecure=True
+        )
     elif otlp_protocol == "grpc":
-        otlp_metric_exporter = metric_exporter_grpc.OTLPMetricExporter(endpoint=otlp_endpoint)
+        otlp_metric_exporter = metric_exporter_grpc.OTLPMetricExporter(
+            endpoint=otlp_endpoint, insecure=True
+        )
     else:
         raise exceptions.OpenTelemetryProtocolException(
             f"invalid OpenTelemetry protocol: {otlp_protocol}"
         )
-    logger.info("✅ OTLP metrics configured")
+    logger.info("OTLP metrics configured")
 
     metrics_readers = []
     otlp_reader = export.PeriodicExportingMetricReader(otlp_metric_exporter)
@@ -37,14 +40,11 @@ def setup(resource, otlp_endpoint, otlp_protocol):
         console_metric_exporter = export.ConsoleMetricExporter()
         console_reader = export.PeriodicExportingMetricReader(console_metric_exporter)
         metrics_readers.append(console_reader)
-        logger.info("✅ Console metrics enabled")
+        logger.info("Console metrics enabled")
 
     meter_provider = sdk_metrics.MeterProvider(resource=resource, metric_readers=metrics_readers)
 
     metrics.set_meter_provider(meter_provider)
-    logger.info("🔥 OpenTelemetry metrics initialized")
-
-    meter = metrics.get_meter_provider().get_meter(settings.OTEL_SERVICE_NAME, version.version_info)
-
-    counter = meter.create_counter("build_info")
-    counter.add(1)
+    logger.info("OpenTelemetry metrics initialized")
+    meter = metrics.get_meter(settings.OTEL_SERVICE_NAME)
+    return meter

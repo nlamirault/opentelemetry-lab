@@ -2,11 +2,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import json
 import logging
-import os
 
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.logging import LoggingInstrumentor
+
 import uvicorn
 
 from otelpython import application
@@ -18,6 +17,7 @@ from otelpython import settings
 
 
 logger = logging.getLogger(__name__)
+tracer = otel.get_tracer()
 
 app = None
 
@@ -42,13 +42,7 @@ def run():
 
     logger.info("Application bootstrap")
     app = application.creates_app(settings.OTEL_SERVICE_NAME)
-    FastAPIInstrumentor().instrument_app(app)
-    LoggingInstrumentor().instrument(
-        set_logging_format=True, log_level=os.getenv("OTEL_LOG_LEVEL", "INFO")
-    )
-    LoggingInstrumentor(
-        logging_format="%(asctime)s %(levelname)s [%(name)s] [%(filename)s:%(lineno)d] [trace_id=%(otelTraceID)s span_id=%(otelSpanID)s resource.service.name=%(otelServiceName)s trace_sampled=%(otelTraceSampled)s] - %(message)s"
-    )
+    application.add_otel_exception_handler(app)
     logger.info("Application is ready")
     uvicorn.run(app, host="0.0.0.0", port=settings.EXPOSE_PORT)
 

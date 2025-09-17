@@ -1,6 +1,10 @@
 import logging
 
 import fastapi
+from fastapi import exceptions
+from fastapi import responses
+from opentelemetry import trace
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from otelpython import version as app_version
 from otelpython.api import chain
@@ -9,7 +13,7 @@ from otelpython.api import root
 from otelpython.api import version
 
 
-def creates_app(service_name):
+def creates_app(service_name: str):
     """Create the application
 
     Returns:
@@ -22,4 +26,27 @@ def creates_app(service_name):
     app.include_router(chain.router)
     app.include_router(health.router)
     app.include_router(version.router)
+    FastAPIInstrumentor().instrument_app(app)  # .expose(app)
     return app
+
+
+def add_otel_exception_handler(app: fastapi.FastAPI):
+    @app.exception_handler(exceptions.HTTPException)
+    async def http_exception_handler(
+        request,  # dead: disable
+        exc,
+    ):  # dead: disable
+        current_span = trace.get_current_span()
+        current_span.set_attributes(
+            {
+                # "span_status": "ERROR",
+                "http.status_text": str(exc.detail),
+                "otel.status_description": f"{exc.status_code} / {exc.detail}",
+                "otel.status_code": "ERROR",
+            }
+        )
+        # current_span.add_event("Test")
+        current_span.record_exception(exc)
+        return responses.JSONResponse(
+            status_code=exc.status_code, content={"detail": str(exc.detail)}
+        )

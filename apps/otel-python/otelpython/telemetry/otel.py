@@ -1,3 +1,4 @@
+from opentelemetry import metrics
 from opentelemetry import trace
 from opentelemetry.sdk import resources
 
@@ -16,4 +17,9 @@ def create_resource(service_name):
 
 def get_tracer():
     """Returns the OpenTelemetry tracer instance."""
-    return trace.get_tracer(settings.OTEL_SERVICE_NAME)  # , SERVICE_VERSION_VALUE)
+    return trace.get_tracer(settings.OTEL_SERVICE_NAME)
+
+
+def get_meter():
+    """Returns the OpenTelemetry meter instance."""
+    return metrics.get_meter(settings.OTEL_SERVICE_NAME)
