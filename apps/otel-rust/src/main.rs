@@ -5,56 +5,77 @@
 use anyhow;
 use std::env;
 
-use axum::{
-    routing,
-    Router,
-};
+use axum::{routing, Router};
 use log;
+use opentelemetry::global;
+use opentelemetry::trace::{Span, Tracer};
 use opentelemetry::KeyValue;
-use opentelemetry::{global};
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
-use opentelemetry_sdk::{propagation::TraceContextPropagator};
-use opentelemetry::trace::{Span, Tracer, TracerProvider};
-use serde_json::{Value, json};
-use tokio::{net};
-use tracing::level_filters::LevelFilter;
-use tracing_subscriber::{fmt, prelude::*, Registry};
+use opentelemetry_sdk::propagation::TraceContextPropagator;
+use serde_json::{json, Value};
+use tokio::net;
+use tracing::error;
+use tracing_subscriber::prelude::*;
+use tracing_subscriber::EnvFilter;
 
 mod otel;
 use otel::create_resource;
-use otel::create_logger;
-use otel::create_tracer;
-use otel::create_meter;
+use otel::init_logger;
+use otel::init_meter;
+use otel::init_tracer;
 
-
-fn opentelemetry(service_name: &'static str) -> anyhow::Result<()> {
-
+fn setup_opentelemetry() -> anyhow::Result<()> {
     let default_endpoint = "http://localhost:4317".to_string();
     let endpoint = env::var("OTEL_EXPORTER_OTLP_ENDPOINT").unwrap_or(default_endpoint);
     let protocol = env::var("OTEL_EXPORTER_OTLP_PROTOCOL").unwrap_or("http".to_string());
-    let resource = create_resource(service_name);
 
-    let logger_provider = create_logger(resource.clone(), endpoint.clone(), protocol.clone()).expect("failed to initialize logger");
-    let meter_provider = create_meter(resource.clone(), endpoint.clone(), protocol.clone()).expect("failed to initialize meter");
-    let tracer_provider = create_tracer(resource.clone(), endpoint.clone(), protocol.clone()).expect("failed to initialize tracer");
+    let resource = create_resource();
+    let logger_provider = init_logger(resource.clone(), endpoint.clone(), protocol.clone());
+    // .expect("failed to initialize logger");
+    let meter_provider = init_meter(resource.clone(), endpoint.clone(), protocol.clone());
+    // .expect("failed to initialize meter");
+    let tracer_provider = init_tracer(resource.clone(), endpoint.clone(), protocol.clone());
+    // .expect("failed to initialize tracer");
 
-    let tracer = tracer_provider.tracer("ttembed");
-    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+    // let tracer = tracer_provider.tracer("ttembed");
+    // let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
 
-    let subscriber = Registry::default()
-        .with(telemetry.with_filter(LevelFilter::INFO))
-        .with(OpenTelemetryTracingBridge::new(&logger_provider).with_filter(LevelFilter::INFO))
-        .with(fmt::Layer::default().with_filter(LevelFilter::DEBUG));
+    let filter_otel = EnvFilter::new("info")
+        .add_directive("hyper=off".parse().unwrap())
+        .add_directive("opentelemetry=off".parse().unwrap())
+        .add_directive("tonic=off".parse().unwrap())
+        .add_directive("h2=off".parse().unwrap())
+        .add_directive("reqwest=off".parse().unwrap());
+    let otel_layer = OpenTelemetryTracingBridge::new(&logger_provider).with_filter(filter_otel);
 
-    tracing::subscriber::set_global_default(subscriber).unwrap();
+    let filter_fmt = EnvFilter::new("info").add_directive("opentelemetry=debug".parse().unwrap());
+    let fmt_layer = tracing_subscriber::fmt::layer()
+        .with_thread_names(true)
+        .with_filter(filter_fmt);
+
+    tracing_subscriber::registry()
+        .with(otel_layer)
+        .with(fmt_layer)
+        .init();
+
+    error!(name: "my-event-name", target: "my-system", event_id = 20, user_name = "otel", user_email = "otel@opentelemetry.io", message = "This is an example message");
+
+    // let subscriber = Registry::default()
+    //     .with(telemetry.with_filter(LevelFilter::INFO))
+    //     .with(OpenTelemetryTracingBridge::new(&logger_provider).with_filter(LevelFilter::INFO))
+    //     .with(fmt::Layer::default().with_filter(LevelFilter::DEBUG));
+    // tracing::subscriber::set_global_default(subscriber).unwrap();
 
     global::set_text_map_propagator(TraceContextPropagator::new());
     global::set_tracer_provider(tracer_provider.clone());
     global::set_meter_provider(meter_provider.clone());
 
+    // tracer_provider.shutdown()?;
+    // meter_provider.shutdown()?;
+    // logger_provider.shutdown()?;
+
     Ok(())
 }
-
 
 async fn handler_root() -> &'static str {
     log::info!("Root handler");
@@ -88,11 +109,11 @@ async fn handler_chain() -> axum::Json<Value> {
             log::info!("OK: {}", res.status());
         }
         Err(e) => {
-          log::error!("failed to check health: {e}");
+            log::error!("failed to check health: {e}");
         }
         Ok(res) => {
-          let status = res.status();
-          log::info!("{target_one} returned {status}");
+            let status = res.status();
+            log::info!("{target_one} returned {status}");
         }
     }
 
@@ -101,11 +122,11 @@ async fn handler_chain() -> axum::Json<Value> {
             log::info!("OK: {}", res.status());
         }
         Err(e) => {
-          log::error!("failed to check health: {e}");
+            log::error!("failed to check health: {e}");
         }
         Ok(res) => {
-          let status = res.status();
-          log::info!("{target_two} returned {status}");
+            let status = res.status();
+            log::info!("{target_two} returned {status}");
         }
     }
 
@@ -117,8 +138,7 @@ async fn handler_chain() -> axum::Json<Value> {
 
 #[tokio::main]
 async fn main() {
-    let _ = opentelemetry("otel-rust");
-
+    let _ = setup_opentelemetry();
     let app = Router::new()
         .route("/", routing::get(handler_root))
         .route("/chain", routing::get(handler_chain))
@@ -126,15 +146,14 @@ async fn main() {
         .route("/health", routing::get(handler_health));
 
     log::info!("booting up server");
-    let port = env::var("EXPOSE_PORT")
-        .ok()
-        .unwrap_or("9999".to_string());
-    let listener = net::TcpListener::bind("0.0.0.0:".to_owned() + &port)
+    let port = env::var("EXPOSE_PORT").ok().unwrap_or("9999".to_string());
+    let addr = format!("0.0.0.0:{}", port);
+    let listener = net::TcpListener::bind(&addr)
         .await
-        .expect("Could not listen on port 9999");
+        .expect(format!("Could not listen on port {}", port).as_str());
     axum::serve(listener, app)
         .await
         .expect("Failed to start http api");
 
-    opentelemetry::global::shutdown_tracer_provider();
+    // opentelemetry::global::shutdown_tracer_provider();
 }
