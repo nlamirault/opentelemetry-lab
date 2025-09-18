@@ -19,7 +19,9 @@ from otelpython import exceptions
 def setup(resource: resources.Resource, otlp_endpoint: str, otlp_protocol: str) -> None:
     otlp_log_exporter = None
     if otlp_protocol == "http":
-        otlp_log_exporter = log_exporter_http.OTLPLogExporter(endpoint=otlp_endpoint, insecure=True)
+        otlp_log_exporter = log_exporter_http.OTLPLogExporter(
+            endpoint=f"{otlp_endpoint}/v1/logs", insecure=True
+        )
     elif otlp_protocol == "grpc":
         otlp_log_exporter = log_exporter_grpc.OTLPLogExporter(endpoint=otlp_endpoint, insecure=True)
     else:

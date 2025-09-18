@@ -24,7 +24,7 @@ def setup(resource: resources.Resource, otlp_endpoint: str, otlp_protocol: str) 
     otlp_metric_exporter = None
     if otlp_protocol == "http":
         otlp_metric_exporter = metric_exporter_http.OTLPMetricExporter(
-            endpoint=otlp_endpoint, insecure=True
+            endpoint=f"{otlp_endpoint}/v1/metrics", insecure=True
         )
     elif otlp_protocol == "grpc":
         otlp_metric_exporter = metric_exporter_grpc.OTLPMetricExporter(

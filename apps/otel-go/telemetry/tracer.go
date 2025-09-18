@@ -18,17 +18,20 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-func InitTracer(ctx context.Context, resource *resource.Resource, protocol string) (*sdktrace.TracerProvider, error) {
+func InitTracer(ctx context.Context, resource *resource.Resource, otlpEndpoint string, protocol string) (*sdktrace.TracerProvider, error) {
 	var otlpExporter sdktrace.SpanExporter
 	var err error
 	switch protocol {
 	case "http":
-		otlpExporter, err = otlptracehttp.New(ctx)
+		otlpExporter, err = otlptracehttp.New(
+			ctx,
+			otlptracehttp.WithEndpointURL(fmt.Sprintf("%s/v1/traces", otlpEndpoint)))
 		if err != nil {
 			return nil, err
 		}
 	case "grpc":
-		otlpExporter, err = otlptracegrpc.New(ctx)
+		otlpExporter, err = otlptracegrpc.New(ctx,
+			otlptracegrpc.WithEndpointURL(otlpEndpoint))
 		if err != nil {
 			return nil, err
 		}

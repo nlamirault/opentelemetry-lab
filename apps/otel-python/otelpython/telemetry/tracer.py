@@ -21,7 +21,7 @@ def setup(resource: resources.Resource, otlp_endpoint: str, otlp_protocol: str) 
     otlp_span_exporter = None
     if otlp_protocol == "http":
         otlp_span_exporter = trace_exporter_http.OTLPSpanExporter(
-            endpoint=otlp_endpoint, insecure=True
+            endpoint=f"{otlp_endpoint}/v1/traces", insecure=True
         )
         print("http ok")
     elif otlp_protocol == "grpc":
@@ -29,7 +29,6 @@ def setup(resource: resources.Resource, otlp_endpoint: str, otlp_protocol: str) 
             endpoint=otlp_endpoint,
             insecure=True,
         )
-        print("grpc ok")
     else:
         raise exceptions.OpenTelemetryProtocolException(
             f"invalid OpenTelemetry protocol: {otlp_protocol}"

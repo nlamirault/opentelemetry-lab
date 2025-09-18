@@ -18,18 +18,21 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-func InitMeter(ctx context.Context, resource *resource.Resource, protocol string) (*sdkmetric.MeterProvider, error) {
+func InitMeter(ctx context.Context, resource *resource.Resource, otlpEndpoint string, protocol string) (*sdkmetric.MeterProvider, error) {
 	var otlpExporter sdkmetric.Exporter
 	var err error
 
 	switch protocol {
 	case "http":
-		otlpExporter, err = otlpmetrichttp.New(ctx)
+		otlpExporter, err = otlpmetrichttp.New(
+			ctx,
+			otlpmetrichttp.WithEndpointURL(fmt.Sprintf("%s/v1/metrics", otlpEndpoint)))
 		if err != nil {
 			return nil, err
 		}
 	case "grpc":
-		otlpExporter, err = otlpmetricgrpc.New(ctx)
+		otlpExporter, err = otlpmetricgrpc.New(ctx,
+			otlpmetricgrpc.WithEndpointURL(otlpEndpoint))
 		if err != nil {
 			return nil, err
 		}
