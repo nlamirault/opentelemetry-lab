@@ -9,58 +9,18 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
-	"net/http"
 	"os"
 	"time"
 
-	"github.com/gin-gonic/gin"
-
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/contrib/instrumentation/host"
 	otelruntime "go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/codes"
-	sdkresource "go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
-	oteltrace "go.opentelemetry.io/otel/trace"
+
+	"github.com/nlamirault/otel-go/router"
+	"github.com/nlamirault/otel-go/telemetry"
 )
 
 var tracer = otel.Tracer("otel-go")
-
-func setupRouter(serviceName string) *gin.Engine {
-	// Disable Console Color
-	gin.DisableConsoleColor()
-	router := gin.Default()
-	router.Use(otelgin.Middleware(serviceName))
-
-	router.GET("/health", func(c *gin.Context) {
-		slog.Info("Health status")
-		c.String(http.StatusOK, "ok")
-	})
-	router.GET("/", rootHandler)
-	router.GET("/version", versionHandler)
-	router.GET("/chain", chainHandler)
-	return router
-}
-
-func httpErrorBadRequest(err error, span oteltrace.Span, ctx *gin.Context) {
-	httpError(err, span, ctx, http.StatusBadRequest)
-}
-
-func httpErrorInternalServerError(err error, span oteltrace.Span, ctx *gin.Context) {
-	httpError(err, span, ctx, http.StatusInternalServerError)
-}
-
-func httpStatusUnauthorized(err error, span oteltrace.Span, ctx *gin.Context) {
-	httpError(err, span, ctx, http.StatusUnauthorized)
-}
-
-func httpError(err error, span oteltrace.Span, ctx *gin.Context, status int) {
-	log.Println(err.Error())
-	span.RecordError(err)
-	span.SetStatus(codes.Error, err.Error())
-	ctx.String(status, err.Error())
-}
 
 func main() {
 	ctx := context.Background()
@@ -102,22 +62,26 @@ func main() {
 		log.Fatal("OpenTelemetry protocol not specified")
 	}
 
-	extraResources, _ := sdkresource.New(
-		ctx,
-		sdkresource.WithOS(),
-		sdkresource.WithProcess(),
-		sdkresource.WithContainer(),
-		sdkresource.WithHost(),
-		sdkresource.WithAttributes(
-			// semconv.SchemaURL,
-			semconv.ServiceName(serviceName)),
-	)
-	resource, _ := sdkresource.Merge(
-		sdkresource.Default(),
-		extraResources,
-	)
+	// extraResources, _ := sdkresource.New(
+	// 	ctx,
+	// 	sdkresource.WithOS(),
+	// 	sdkresource.WithProcess(),
+	// 	sdkresource.WithContainer(),
+	// 	sdkresource.WithHost(),
+	// 	sdkresource.WithAttributes(
+	// 		// semconv.SchemaURL,
+	// 		semconv.ServiceName(serviceName)),
+	// )
+	// resource, _ := sdkresource.Merge(
+	// 	sdkresource.Default(),
+	// 	extraResources,
+	// )
+	resource, err := telemetry.CreateResource(ctx, serviceName)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	lp, err := initLogger(ctx, resource, serviceName, protocol)
+	lp, err := telemetry.InitLogger(ctx, resource, serviceName, protocol)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -127,7 +91,7 @@ func main() {
 		}
 	}()
 
-	tp, err := initTracer(ctx, resource, protocol)
+	tp, err := telemetry.InitTracer(ctx, resource, protocol)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -137,7 +101,7 @@ func main() {
 		}
 	}()
 
-	mp, err := initMeter(ctx, resource, protocol)
+	mp, err := telemetry.InitMeter(ctx, resource, protocol)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -158,12 +122,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	router := setupRouter(serviceName)
+	r := router.New(serviceName)
+	r.SetupRoutes()
 
 	port := os.Getenv("EXPOSE_PORT")
 	if len(port) == 0 {
 		port = "8888"
 	}
 	slog.InfoContext(ctx, "Starting server")
-	router.Run(fmt.Sprintf(":%s", port))
+	r.Engine().Run(fmt.Sprintf(":%s", port))
 }
