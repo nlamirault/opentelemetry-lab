@@ -5,11 +5,11 @@
 package handlers
 
 import (
-	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 )
 
 type HealthHandler struct{}
@@ -20,9 +20,8 @@ func NewHealthHandler() *HealthHandler {
 
 func (h *HealthHandler) Health(ctx *gin.Context) {
 	span := trace.SpanFromContext(ctx)
-	slog.With(
-		"trace_id", span.SpanContext().TraceID(),
-		"span_id", span.SpanContext().SpanID(),
-	).InfoContext(ctx, "Health status")
+	zap.L().Info("Health status",
+		zap.String("trace_id", span.SpanContext().TraceID().String()),
+		zap.String("span_id", span.SpanContext().SpanID().String()))
 	ctx.String(http.StatusOK, "ok")
 }

@@ -6,11 +6,11 @@ package client
 
 import (
 	"io"
-	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type HTTPClient struct {
@@ -26,7 +26,7 @@ func NewHTTPClient() *HTTPClient {
 }
 
 func (h *HTTPClient) Call(ctx *gin.Context, url string) error {
-	slog.InfoContext(ctx, "HTTP call to", "url", url)
+	zap.L().Info("HTTP call to", zap.String("url", url))
 	
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -39,13 +39,13 @@ func (h *HTTPClient) Call(ctx *gin.Context, url string) error {
 	}
 	defer resp.Body.Close()
 
-	slog.InfoContext(ctx, "Response", "status", resp.Status)
+	zap.L().Info("Response", zap.String("status", resp.Status))
 	
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 	
-	slog.DebugContext(ctx, "Body", "body", string(body))
+	zap.L().Debug("Body", zap.String("body", string(body)))
 	return nil
 }

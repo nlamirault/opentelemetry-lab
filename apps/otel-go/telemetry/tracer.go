@@ -7,7 +7,6 @@ package telemetry
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"os"
 
 	"go.opentelemetry.io/otel"
@@ -61,6 +60,6 @@ func InitTracer(ctx context.Context, resource *resource.Resource, protocol strin
 	otel.SetTracerProvider(provider)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 
-	slog.InfoContext(ctx, "OpenTelemetry tracer provider done")
+	// Logging is handled by the global zap logger configured in telemetry/logger.go
 	return provider, nil
 }

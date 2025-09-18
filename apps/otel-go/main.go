@@ -8,13 +8,13 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"log/slog"
 	"os"
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/host"
 	otelruntime "go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
+	"go.uber.org/zap"
 
 	"github.com/nlamirault/otel-go/router"
 	"github.com/nlamirault/otel-go/telemetry"
@@ -129,6 +129,6 @@ func main() {
 	if len(port) == 0 {
 		port = "8888"
 	}
-	slog.InfoContext(ctx, "Starting server")
+	zap.L().Info("Starting server")
 	r.Engine().Run(fmt.Sprintf(":%s", port))
 }

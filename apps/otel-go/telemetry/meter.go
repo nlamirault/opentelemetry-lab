@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"os"
 
 	"go.opentelemetry.io/otel"
@@ -64,6 +63,6 @@ func InitMeter(ctx context.Context, resource *resource.Resource, protocol string
 
 	otel.SetMeterProvider(provider)
 
-	slog.InfoContext(ctx, "OpenTelemetry meter provider done")
+	// Logging is handled by the global zap logger configured in telemetry/logger.go
 	return provider, nil
 }
