@@ -6,21 +6,21 @@ package xyz.lamirault.otel.app.service;
 
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
-import io.opentelemetry.instrumentation.annotations.WithSpan;
+// import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Random;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
 
 @Component
 public class CoreService {
 
-  private final Logger logger = LoggerFactory.getLogger(CoreService.class);
+  private final Logger logger = LogManager.getLogger(CoreService.class);
   private final Random random = new Random();
 
-  @WithSpan(kind = SpanKind.CLIENT)
+  // @WithSpan(kind = SpanKind.CLIENT)
   public String getDate() {
     logger.info("retrieve date");
 
