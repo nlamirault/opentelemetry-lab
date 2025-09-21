@@ -2,15 +2,16 @@ import logging
 
 import fastapi
 
+from otelpython.telemetry import metrics
 from otelpython import version
 
 
-LOGGER = logging.getLogger(__name__)
-
+logger = logging.getLogger(__name__)
 router = fastapi.APIRouter()
 
 
 @router.get("/version", tags=["version"])
-async def version_handler():
-    LOGGER.info("[handler] Version")
+async def version_handler() -> dict[str, str]:
+    logger.info("[handler] Version")
+    metrics.request_counter.add(1, {"target_service": "version"})
     return {"version": version.version_info}

@@ -6,10 +6,10 @@ mod resource_provider;
 pub use resource_provider::create_resource;
 
 mod otel_logger;
-pub use otel_logger::create_logger;
+pub use otel_logger::init_logger;
 
 mod otel_meter;
-pub use otel_meter::create_meter;
+pub use otel_meter::init_meter;
 
 mod otel_tracer;
-pub use otel_tracer::create_tracer;
+pub use otel_tracer::init_tracer;

@@ -29,7 +29,7 @@ help:
 	@echo -e "$(OK_COLOR)      $(BANNER)$(NO_COLOR)"
 	@echo "------------------------------------------------------------------"
 	@echo ""
-	@awk 'BEGIN {FS = ":.*##"; printf "Usage: make ${INFO_COLOR}<target>${NO_COLOR}\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  ${INFO_COLOR}%-25s${NO_COLOR} %s\n", $$1, $$2 } /^##@/ { printf "\n${WHITE_COLOR}%s${NO_COLOR}\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*##"; printf "Usage: make ${INFO_COLOR}<target>${NO_COLOR}\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  ${INFO_COLOR}%-35s${NO_COLOR} %s\n", $$1, $$2 } /^##@/ { printf "\n${WHITE_COLOR}%s${NO_COLOR}\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 	@echo ""
 
 guard-%:
@@ -47,30 +47,45 @@ check-%:
 
 ##@ Development
 
-.PHONY: docker-build
-docker-build: guard-APP ## Build Docker image
+.PHONY: build
+build: guard-APP ## Build Docker image
 	@echo -e "$(INFO)$(INFO_COLOR)[Docker] Build image for $(APP)$(NO_COLOR)"
 	@docker buildx build -f apps/$(APP)/Dockerfile apps/$(APP) --tag opentelemetry-lab/otel-$(APP):latest
 
-.PHONY: docker-run
-docker-run: guard-APP ## Launch Docker image
+.PHONY: run
+run: guard-APP ## Launch Docker image
 	@echo -e "$(INFO)$(INFO_COLOR)[Docker] Running image for $(APP)$(NO_COLOR)"
 	@docker run --rm opentelemetry-lab/otel-$(APP):latest
 
-.PHONY: docker-start
-docker-start: guard-CHOICE ## Execute the Docker image
+.PHONY: start-observability
+start-observability: guard-CHOICE ## Start the observability stack
 	@echo -e "$(INFO)$(INFO_COLOR)[Docker-Compose] Starting lab using $(CHOICE)$(NO_COLOR)"
-	@docker-compose -f docker-compose-$(CHOICE).yaml up -d
+	@docker-compose -f docker-compose-core.yaml -f docker-compose-$(CHOICE).yaml up -d
 
-.PHONY: docker-stop
-docker-stop: guard-CHOICE ## Execute the Docker image
-	@echo -e "$(INFO)$(INFO_COLOR)[Docker-Compose] Stopping lab using $(CHOICE)$(NO_COLOR)"
-	@docker-compose -f docker-compose-$(CHOICE).yaml down
+.PHONY: stop-observability
+stop-observability: guard-CHOICE ## Stop the observability stack
+	@echo -e "$(INFO)$(INFO_COLOR)[Docker-Compose] Stopping lab using $(CHOICE) $(NO_COLOR)"
+	@docker-compose -f docker-compose-core.yaml -f docker-compose-$(CHOICE).yaml down
 
-.PHONY: docker-logs
-docker-logs: guard-CHOICE guard-SERVICE ## Execute the Docker image
-	@echo -e "$(INFO)$(INFO_COLOR)[Docker-Compose] Display logs using $(CHOICE)$(NO_COLOR)"
-	@docker-compose -f docker-compose-$(CHOICE).yaml logs -f $(SERVICE)
+.PHONY: logs-observability
+logs-observability: guard-CHOICE guard-SERVICE ## Display logs of observability stack
+	@echo -e "$(INFO)$(INFO_COLOR)[Docker-Compose] Display logs using $(CHOICE) $(SERVICE)$(NO_COLOR)"
+	@docker-compose -f docker-compose-core.yaml -f docker-compose-$(CHOICE).yaml logs -f $(SERVICE)
+
+.PHONY: start-apps
+start-apps: ## ## Start the applications
+	@echo -e "$(INFO)$(INFO_COLOR)[Docker-Compose] Starting applications $(NO_COLOR)"
+	@docker-compose -f docker-compose-core.yaml -f docker-compose-apps.yaml up -d
+
+.PHONY: stop-apps
+stop-apps: ## Stop the applications
+	@echo -e "$(INFO)$(INFO_COLOR)[Docker-Compose] Stopping applications $(NO_COLOR)"
+	@docker-compose -f docker-compose-core.yaml -f docker-compose-apps.yaml down
+
+.PHONY: logs-apps
+logs-apps: guard-SERVICE ## Display logs of the application
+@echo -e "$(INFO)$(INFO_COLOR)[Docker-Compose] Display logs application: $(SERVICE) $(NO_COLOR)"
+	@docker-compose -f docker-compose-core.yaml -f docker-compose-apps.yaml logs -f $(SERVICE)
 
 .PHONE: d2-build
 d2-build: ## Generate architecture diagram

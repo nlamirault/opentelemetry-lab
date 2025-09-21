@@ -2,48 +2,45 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use std::time::Duration;
+// use std::time::Duration;
 
-use opentelemetry::metrics::MetricsError;
-use opentelemetry_otlp::{ExportConfig, Protocol, WithExportConfig};
-use opentelemetry_sdk::metrics::reader::DefaultTemporalitySelector;
+use opentelemetry_otlp::{MetricExporter, Protocol, WithExportConfig};
+use opentelemetry_sdk::metrics::{PeriodicReader, SdkMeterProvider};
 use opentelemetry_sdk::Resource;
 
-pub fn create_meter(
-    resource: Resource,
-    endpoint: String,
-    protocol: String,
-) -> Result<opentelemetry_sdk::metrics::SdkMeterProvider, MetricsError> {
-    let otlp_exporter: opentelemetry_otlp::MetricsExporterBuilder = match protocol.as_str() {
-        "grpc" => opentelemetry_otlp::new_exporter()
-            .tonic()
-            .with_export_config(ExportConfig {
-                endpoint: endpoint.to_string(),
-                timeout: Duration::from_secs(3),
-                protocol: Protocol::Grpc,
-            })
-            .into(),
-        "http" => opentelemetry_otlp::new_exporter()
-            .http()
-            .with_export_config(ExportConfig {
-                endpoint: endpoint.to_string(),
-                timeout: Duration::from_secs(3),
-                protocol: Protocol::HttpBinary,
-            })
-            .into(),
-        &_ => {
-            return Err(MetricsError::Other(
-                "OpenTelemetry protocol is not supported".into(),
-            ))
-        }
+pub fn init_meter(resource: Resource, endpoint: String, protocol: String) -> SdkMeterProvider {
+    let exporter: opentelemetry_otlp::MetricExporter = match protocol.as_str() {
+        "grpc" => MetricExporter::builder()
+            .with_tonic()
+            // .with_export_config(ExportConfig {
+            //     endpoint: endpoint.into(),
+            //     timeout: Duration::from_secs(3).into(),
+            //     protocol: Protocol::Grpc,
+            // })
+            .with_protocol(Protocol::Grpc)
+            .with_endpoint(endpoint)
+            .build()
+            .expect("Failed to initialize OTLP meter exporter"),
+        "http" => MetricExporter::builder()
+            .with_http()
+            // .with_export_config(ExportConfig {
+            //     endpoint: endpoint.clone() + "/v1/metrics",
+            //     timeout: Duration::from_secs(3).into(),
+            //     protocol: Protocol::HttpBinary,
+            // })
+            .with_protocol(Protocol::HttpBinary)
+            .with_endpoint(endpoint.clone() + "/v1/metrics")
+            .build()
+            .expect("Failed to initialize OTLP meter exporter"),
+        &_ => panic!("unsupported OTLP protocol: {}", protocol),
     };
 
-    opentelemetry_otlp::new_pipeline()
-        .metrics(opentelemetry_sdk::runtime::Tokio)
-        .with_exporter(otlp_exporter)
-        .with_resource(resource.clone())
-        .with_period(Duration::from_secs(3))
-        .with_timeout(Duration::from_secs(10))
-        .with_temporality_selector(DefaultTemporalitySelector::new())
-        .build()
+    let reader = PeriodicReader::builder(exporter).build();
+
+    let provider: SdkMeterProvider = SdkMeterProvider::builder()
+        .with_reader(reader)
+        .with_resource(resource)
+        .build();
+
+    provider
 }

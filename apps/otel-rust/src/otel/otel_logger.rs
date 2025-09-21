@@ -2,65 +2,48 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use std::time::Duration;
+// use std::time::Duration;
 
-use opentelemetry::logs::LogError;
-use opentelemetry_appender_log::OpenTelemetryLogBridge;
-use opentelemetry_otlp::{ExportConfig, Protocol, WithExportConfig};
-use opentelemetry_sdk::logs::LoggerProvider;
+use opentelemetry_otlp::{LogExporter, Protocol, WithExportConfig};
+use opentelemetry_sdk::logs::SdkLoggerProvider;
 use opentelemetry_sdk::Resource;
 
-pub fn create_logger(
-    resource: Resource,
-    endpoint: String,
-    protocol: String,
-) -> Result<opentelemetry_sdk::logs::LoggerProvider, LogError> {
-    let log_stdout_exporter = opentelemetry_stdout::LogExporter::default();
+pub fn init_logger(resource: Resource, endpoint: String, protocol: String) -> SdkLoggerProvider {
+    let stdout_exporter = opentelemetry_stdout::LogExporter::default();
 
-    let otlp_exporter: opentelemetry_otlp::LogExporterBuilder = match protocol.as_str() {
-        "grpc" => opentelemetry_otlp::new_exporter()
-            .tonic()
-            .with_export_config(ExportConfig {
-                endpoint: endpoint.to_string(),
-                timeout: Duration::from_secs(3),
-                protocol: Protocol::Grpc,
-            })
-            .into(),
-        "http" => opentelemetry_otlp::new_exporter()
-            .http()
-            .with_export_config(ExportConfig {
-                endpoint: endpoint.to_string(),
-                timeout: Duration::from_secs(3),
-                protocol: Protocol::HttpBinary,
-            })
-            .into(),
-        &_ => {
-            return Err(LogError::Other(
-                "OpenTelemetry protocol is not supported".into(),
-            ))
-        }
+    let otlp_exporter: opentelemetry_otlp::LogExporter = match protocol.as_str() {
+        "grpc" => LogExporter::builder()
+            .with_tonic()
+            // .with_export_config(ExportConfig {
+            //     endpoint: endpoint.into(),
+            //     timeout: Duration::from_secs(3).into(),
+            //     protocol: Protocol::Grpc,
+            // })
+            .with_protocol(Protocol::Grpc)
+            .with_endpoint(endpoint)
+            .build()
+            .expect("Failed to initialize OTLP logger exporter"),
+        "http" => LogExporter::builder()
+            .with_http()
+            // .with_export_config(ExportConfig {
+            //     endpoint: endpoint.clone() + "/v1/logs",
+            //     timeout: Duration::from_secs(3).into(),
+            //     protocol: Protocol::HttpBinary,
+            // })
+            .with_protocol(Protocol::HttpBinary)
+            .with_endpoint(endpoint.clone() + "/v1/logs")
+            .build()
+            .expect("Failed to initialize OTLP logger exporter"),
+        &_ => panic!("unsupported OTLP protocol: {}", protocol),
     };
 
-    let logger_provider = LoggerProvider::builder()
-        .with_resource(resource.clone())
-        .with_simple_exporter(log_stdout_exporter)
+    let provider: SdkLoggerProvider = SdkLoggerProvider::builder()
+        .with_batch_exporter(otlp_exporter)
+        .with_simple_exporter(stdout_exporter)
+        .with_resource(resource)
         .build();
 
-    // Setup Log Appender for the log crate.
-    let otel_log_appender = OpenTelemetryLogBridge::new(&logger_provider);
-    log::set_boxed_logger(Box::new(otel_log_appender)).unwrap();
-    log::set_max_level(log::Level::Debug.to_level_filter());
+    // Note: Log bridge setup moved to main.rs to avoid conflicts with tracing subscriber
 
-    opentelemetry_otlp::new_pipeline()
-        .logging()
-        .with_batch_config(
-            opentelemetry_sdk::logs::BatchConfigBuilder::default()
-                .with_max_queue_size(30000)
-                .with_max_export_batch_size(10000)
-                .with_scheduled_delay(Duration::from_millis(5000))
-                .build(),
-        )
-        .with_resource(resource.clone())
-        .with_exporter(otlp_exporter)
-        .install_batch(opentelemetry_sdk::runtime::Tokio)
+    provider
 }

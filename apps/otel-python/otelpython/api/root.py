@@ -2,13 +2,16 @@ import logging
 
 import fastapi
 
+from otelpython.telemetry import metrics
 
-LOGGER = logging.getLogger(__name__)
+
+logger = logging.getLogger(__name__)
 
 router = fastapi.APIRouter()
 
 
 @router.get("/", tags=["root"])
-async def root_handler():
-    LOGGER.info("[handler] Version")
+async def root_handler() -> str:
+    logger.info("[handler] Version")
+    metrics.request_counter.add(1, {"target_service": "root"})
     return "OpenTelemetry Lab / Python"

@@ -2,35 +2,48 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import json
 import logging
-from os import environ
 
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.logging import LoggingInstrumentor
+
 import uvicorn
 
 from otelpython import application
-from otelpython.telemetry import logger
-from otelpython.telemetry import meter
-from otelpython.telemetry import tracer
+from otelpython.telemetry import logger as otel_logger
+from otelpython.telemetry import meter as otel_meter
+from otelpython.telemetry import otel
+from otelpython.telemetry import tracer as otel_tracer
 from otelpython import settings
 
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
+tracer = otel.get_tracer()
 
 app = None
 
 
-def run():
-    logger.setup(settings.SERVICE_NAME, settings.OTLP_ENDPOINT, settings.OTLP_PROTOCOL)
-    tracer.setup(settings.SERVICE_NAME, settings.OTLP_ENDPOINT, settings.OTLP_PROTOCOL)
-    meter.setup(settings.SERVICE_NAME, settings.OTLP_ENDPOINT, settings.OTLP_PROTOCOL)
-    app = application.creates_app(settings.SERVICE_NAME)
-    FastAPIInstrumentor().instrument_app(app)
-    LoggingInstrumentor().instrument(set_logging_format=True)
-    LoggingInstrumentor(
-        logging_format="%(asctime)s %(levelname)s [%(name)s] [%(filename)s:%(lineno)d] [trace_id=%(otelTraceID)s span_id=%(otelSpanID)s resource.service.name=%(otelServiceName)s trace_sampled=%(otelTraceSampled)s] - %(message)s"
+def run() -> None:
+    resource = otel.create_resource(settings.OTEL_SERVICE_NAME)
+    otel_logger.setup(
+        resource,
+        settings.OTEL_EXPORTER_OTLP_ENDPOINT,
+        settings.OTEL_EXPORTER_OTLP_PROTOCOL,
     )
+    otel_tracer.setup(
+        resource,
+        settings.OTEL_EXPORTER_OTLP_ENDPOINT,
+        settings.OTEL_EXPORTER_OTLP_PROTOCOL,
+    )
+    otel_meter.setup(
+        resource,
+        settings.OTEL_EXPORTER_OTLP_ENDPOINT,
+        settings.OTEL_EXPORTER_OTLP_PROTOCOL,
+    )
+
+    logger.info("Application bootstrap")
+    app = application.creates_app(settings.OTEL_SERVICE_NAME)
+    application.add_otel_exception_handler(app)
+    logger.info("Application is ready")
     uvicorn.run(app, host="0.0.0.0", port=settings.EXPOSE_PORT)
 
 
