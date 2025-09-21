@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use std::time::Duration;
+// use std::time::Duration;
 
-use opentelemetry_otlp::{ExportConfig, LogExporter, Protocol, WithExportConfig};
+use opentelemetry_otlp::{LogExporter, Protocol, WithExportConfig};
 use opentelemetry_sdk::logs::SdkLoggerProvider;
 use opentelemetry_sdk::Resource;
 
@@ -14,20 +14,24 @@ pub fn init_logger(resource: Resource, endpoint: String, protocol: String) -> Sd
     let otlp_exporter: opentelemetry_otlp::LogExporter = match protocol.as_str() {
         "grpc" => LogExporter::builder()
             .with_tonic()
-            .with_export_config(ExportConfig {
-                endpoint: endpoint.into(),
-                timeout: Duration::from_secs(3).into(),
-                protocol: Protocol::Grpc,
-            })
+            // .with_export_config(ExportConfig {
+            //     endpoint: endpoint.into(),
+            //     timeout: Duration::from_secs(3).into(),
+            //     protocol: Protocol::Grpc,
+            // })
+            .with_protocol(Protocol::Grpc)
+            .with_endpoint(endpoint)
             .build()
             .expect("Failed to initialize OTLP logger exporter"),
         "http" => LogExporter::builder()
             .with_http()
-            .with_export_config(ExportConfig {
-                endpoint: endpoint.into(),
-                timeout: Duration::from_secs(3).into(),
-                protocol: Protocol::HttpBinary,
-            })
+            // .with_export_config(ExportConfig {
+            //     endpoint: endpoint.clone() + "/v1/logs",
+            //     timeout: Duration::from_secs(3).into(),
+            //     protocol: Protocol::HttpBinary,
+            // })
+            .with_protocol(Protocol::HttpBinary)
+            .with_endpoint(endpoint.clone() + "/v1/logs")
             .build()
             .expect("Failed to initialize OTLP logger exporter"),
         &_ => panic!("unsupported OTLP protocol: {}", protocol),

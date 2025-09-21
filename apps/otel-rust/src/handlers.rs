@@ -12,10 +12,12 @@ use serde_json::{json, Value};
 use tracing::{error, info};
 
 pub async fn handler_root() -> &'static str {
+    // &'static str {
     info!(target: "otel_rust::handlers", "Root handler");
     let tracer = global::tracer("otel-rust");
     let mut span = tracer.start("root_handler");
     span.set_attribute(KeyValue::new("path", "/".to_string()));
+    span.end();
     "OpenTelemetry Lab / Rust"
 }
 
@@ -31,6 +33,18 @@ pub async fn handler_version() -> Json<Value> {
 
 pub async fn handler_chain() -> Json<Value> {
     info!(target: "otel_rust::handlers", "Chain handler");
+
+    // let mut _span = tracer
+    //     .span_builder("Call to /myendpoint")
+    //     .with_kind(SpanKind::Internal)
+    //     .start(&tracer);
+    // _span.set_attribute(KeyValue::new("http.method", "GET"));
+    // _span.set_attribute(KeyValue::new("net.protocol.version", "1.1"));
+
+    // TODO: Your code goes here
+
+    // span.end();
+
     let target_one = env::var("TARGET_ONE_SVC")
         .ok()
         .unwrap_or("http://localhost:9999".to_string());
