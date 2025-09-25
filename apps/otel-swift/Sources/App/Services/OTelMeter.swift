@@ -71,8 +71,7 @@ class OpenTelemetryMeter {
 
   func getMeter() -> any OpenTelemetryApi.Meter {
     return OpenTelemetry.instance.meterProvider.get(
-      instrumentationName: Constants.applicationName,  // Instrumentation.instrumentationScopeName,
-      instrumentationVersion: Instrumentation.instrumentationVersion
+      name: Constants.applicationName
     )
   }
 }

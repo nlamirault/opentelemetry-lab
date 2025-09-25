@@ -1,5 +1,5 @@
 {
-  "originHash" : "8146c24d2ce2c553dc71568bb2fa3b7e0d0866bf6a233d3b7362f7a3e97c67d7",
+  "originHash" : "f18db5e2cced16285f75f343b819c8be53831dcdc6b8890e9fa096c9df789540",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -29,12 +29,30 @@
       }
     },
     {
+      "identity" : "generic-json",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Frizlab/generic-json.git",
+      "state" : {
+        "revision" : "1546c2a3ad995f2c7c6479cf9e8cb9ebb80a2578",
+        "version" : "3.1.3"
+      }
+    },
+    {
       "identity" : "grpc-swift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/grpc/grpc-swift.git",
       "state" : {
         "revision" : "a56a157218877ef3e9625f7e1f7b2cb7e46ead1b",
         "version" : "1.26.1"
+      }
+    },
+    {
+      "identity" : "json-logger",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/xcode-actions/json-logger.git",
+      "state" : {
+        "revision" : "6056e4438fb0e07caa44a7bc11d645b6c33bfb96",
+        "version" : "1.0.0"
       }
     },
     {
