@@ -76,18 +76,29 @@ processors:
 exporters:
   otlphttp/logs:
     endpoint: ${OTEL_EXPORTER_OTLP_LOGS_ENDPOINT}
+    headers:
+      x-greptime-db-name: "opentelemetry_lab_logs"
+      # x-greptime-log-table-name: 'opentelemetry_logs'
+      # x-greptime-pipeline-name: "greptime_logs_v1"
+      # x-greptime-pipeline-version: 'v1.0.0'
     tls:
       insecure: true
   otlphttp/metrics:
     endpoint: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT}
+    headers:
+      x-greptime-db-name: "opentelemetry_lab_metrics"
     tls:
       insecure: true
-  otlp/profiles:
-    endpoint: ${OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT}
-    tls:
-      insecure: true
+  # otlp/profiles:
+  #   endpoint: ${OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT}
+  #   tls:
+  #     insecure: true
   otlphttp/traces:
     endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT}
+    headers:
+      x-greptime-db-name: "opentelemetry_lab_traces"
+      x-greptime-pipeline-name: 'greptime_trace_v1'
+      # x-greptime-pipeline-version: 'v1.0.0'
     tls:
       insecure: true
 
@@ -112,10 +123,39 @@ service:
   telemetry:
     logs:
       encoding: json
+    # metrics:
+    #   address: 0.0.0.0:8888
   extensions:
     - health_check
     - pprof
   pipelines:
+    logs:
+      receivers:
+      - otlp
+      - tcplog/docker
+      processors:
+      - batch
+      - attributes
+      exporters:
+      - otlphttp/logs
+      - debug/logs
+    metrics:
+      receivers:
+      - otlp
+      - prometheus/collector
+      processors:
+      # - resourcedetection/docker
+      - resourcedetection/env
+      - resourcedetection/system
+      - batch
+      exporters:
+      - otlphttp/metrics
+      - debug/metrics
+    # profiles:
+    #   receivers:
+    #   - otlp
+    #   exporters:
+    #   - otlp/profiles
     traces:
       receivers:
       - otlp
@@ -127,30 +167,3 @@ service:
     # metrics/spanmetrics:
     #   receivers: [spanmetrics]
     #   exporters: [prometheus]
-    metrics:
-      receivers:
-      - otlp
-      - prometheus/collector
-      processors:
-      - resourcedetection/docker
-      - resourcedetection/env
-      - resourcedetection/system
-      - batch
-      exporters:
-      - otlphttp/metrics
-      - debug/metrics
-    logs:
-      receivers:
-      - otlp
-      - tcplog/docker
-      processors:
-      - batch
-      - attributes
-      exporters:
-      - otlphttp/logs
-      - debug/logs
-    profiles:
-      receivers:
-      - otlp
-      exporters:
-      - otlp/profiles

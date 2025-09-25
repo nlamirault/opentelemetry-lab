@@ -65,7 +65,7 @@ start-observability: guard-CHOICE ## Start the observability stack
 .PHONY: stop-observability
 stop-observability: guard-CHOICE ## Stop the observability stack
 	@echo -e "$(INFO)$(INFO_COLOR)[Docker-Compose] Stopping lab using $(CHOICE) $(NO_COLOR)"
-	@docker-compose -f docker-compose-core.yaml -f docker-compose-$(CHOICE).yaml down
+	@docker-compose -f docker-compose-core.yaml -f docker-compose-$(CHOICE).yaml down --remove-orphans
 
 .PHONY: logs-observability
 logs-observability: guard-CHOICE guard-SERVICE ## Display logs of observability stack
@@ -80,7 +80,7 @@ start-apps: ## ## Start the applications
 .PHONY: stop-apps
 stop-apps: ## Stop the applications
 	@echo -e "$(INFO)$(INFO_COLOR)[Docker-Compose] Stopping applications $(NO_COLOR)"
-	@docker-compose -f docker-compose-core.yaml -f docker-compose-apps.yaml down
+	@docker-compose -f docker-compose-core.yaml -f docker-compose-apps.yaml down --remove-orphans
 
 .PHONY: logs-apps
 logs-apps: guard-SERVICE ## Display logs of the application

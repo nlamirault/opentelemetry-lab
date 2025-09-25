@@ -7,7 +7,14 @@
         <!-- Default settings. -->
         <default>
             <!-- Maximum memory usage for processing single query, in bytes. -->
-            <max_memory_usage>10000000000</max_memory_usage>
+            <!-- <max_memory_usage>10000000000</max_memory_usage> -->
+
+            <!-- Memory settings OpenTelemetry Lab -->
+            <max_memory_usage>5000000000</max_memory_usage>
+            <max_bytes_before_external_group_by
+      >4000000000</max_bytes_before_external_group_by>
+            <max_bytes_before_external_sort
+      >4000000000</max_bytes_before_external_sort>
 
             <!-- How to choose between replicas during distributed query processing.
                  random - choose random replica from set of replicas with minimum number of errors

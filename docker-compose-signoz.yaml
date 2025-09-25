@@ -13,7 +13,7 @@ x-common: &common
       max-file: "3"
 
 x-clickhouse-defaults: &clickhouse-defaults
-  !!merge <<: *common
+  <<: *common
   image: clickhouse/clickhouse-server:25.5.6
   tty: true
   labels:
@@ -44,7 +44,7 @@ x-clickhouse-defaults: &clickhouse-defaults
     - CLICKHOUSE_SKIP_USER_SETUP=1
 
 x-zookeeper-defaults: &zookeeper-defaults
-  !!merge <<: *common
+  <<: *common
   image: signoz/zookeeper:3.7.1
   user: root
   labels:
@@ -58,8 +58,9 @@ x-zookeeper-defaults: &zookeeper-defaults
     interval: 30s
     timeout: 5s
     retries: 3
+
 x-db-depend: &db-depend
-  !!merge <<: *common
+  <<: *common
   depends_on:
     clickhouse:
       condition: service_healthy
@@ -69,8 +70,28 @@ x-db-depend: &db-depend
 
 services:
 
+  # otel-collector:
+  #   <<: *common
+  #   image: otel/opentelemetry-collector-contrib:0.135.0
+  #   container_name: otel
+  #   command:
+  #   - "--config=/conf/config.yaml"
+  #   - "--feature-gates=service.profilesSupport"
+  #   volumes:
+  #   - ./etc/otel/otel-collector.yaml:/conf/config.yaml
+  #   ports:
+  #   - "4317:4317" # OTLP gRPC receiver
+  #   - "4318:4318" # OTLP http receiver
+  #   - "8889:8889" # Prometheus metrics exporter
+  #   environment:
+  #   - OTEL_EXPORTER_OTLP_PROTOCOL=http
+  #   - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://signoz:5318
+  #   - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://signoz:5318
+  #   - OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT=http://signoz:5318
+  #   - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://signoz:5318
+
   init-clickhouse:
-    !!merge <<: *common
+    <<: *common
     image: clickhouse/clickhouse-server:25.5.6
     container_name: signoz-init-clickhouse
     command:
@@ -89,30 +110,30 @@ services:
     volumes:
     - ./etc/clickhouse/user_scripts:/var/lib/clickhouse/user_scripts/
 
-  schema-migrator-sync:
-    !!merge <<: *common
-    image: signoz/signoz-schema-migrator:${OTELCOL_TAG:-v0.129.5}
-    container_name: schema-migrator-sync
-    command:
-      - sync
-      - --dsn=tcp://clickhouse:9000
-      - --up=
-    depends_on:
-      clickhouse:
-        condition: service_healthy
-    restart: on-failure
-  schema-migrator-async:
-    !!merge <<: *db-depend
-    image: signoz/signoz-schema-migrator:${OTELCOL_TAG:-v0.129.5}
-    container_name: schema-migrator-async
-    command:
-      - async
-      - --dsn=tcp://clickhouse:9000
-      - --up=
-    restart: on-failure
+  # schema-migrator-sync:
+  #   <<: *common
+  #   image: signoz/signoz-schema-migrator:${OTELCOL_TAG:-v0.129.5}
+  #   container_name: schema-migrator-sync
+  #   command:
+  #     - sync
+  #     - --dsn=tcp://clickhouse:9000
+  #     - --up=
+  #   depends_on:
+  #     clickhouse:
+  #       condition: service_healthy
+  #   restart: on-failure
+  # schema-migrator-async:
+  #   <<: *db-depend
+  #   image: signoz/signoz-schema-migrator:${OTELCOL_TAG:-v0.129.5}
+  #   container_name: schema-migrator-async
+  #   command:
+  #     - async
+  #     - --dsn=tcp://clickhouse:9000
+  #     - --up=
+  #   restart: on-failure
 
   zookeeper-1:
-    !!merge <<: *zookeeper-defaults
+    <<: *zookeeper-defaults
     container_name: signoz-zookeeper-1
     # ports:
     #   - "2181:2181"
@@ -128,12 +149,12 @@ services:
     - ZOO_PROMETHEUS_METRICS_PORT_NUMBER=9141
 
   clickhouse:
-    !!merge <<: *clickhouse-defaults
+    <<: *clickhouse-defaults
     container_name: signoz-clickhouse
-    # ports:
-    #   - "9000:9000"
-    #   - "8123:8123"
-    #   - "9181:9181"
+    ports:
+      - "9000:9000"
+      - "8123:8123"
+      - "9181:9181"
     volumes:
     - ./etc/clickhouse/config.xml:/etc/clickhouse-server/config.xml
     - ./etc/clickhouse/users.xml:/etc/clickhouse-server/users.xml
@@ -142,60 +163,48 @@ services:
     - ./etc/clickhouse/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml
     - clickhouse:/var/lib/clickhouse/
       # - ./etc/clickhouse/storage.xml:/etc/clickhouse-server/config.d/storage.xml
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 3G
 
-  signoz:
-    !!merge <<: *db-depend
-    image: signoz/signoz:${VERSION:-v0.95.0}
-    container_name: signoz
-    command:
-      - --config=/root/config/prometheus.yml
-    ports:
-    - "8080:8080" # signoz port
-    - "5317:4317" # OTLP gRPC receiver
-    - "5318:4318" # OTLP http receiver
-    #   - "6060:6060"     # pprof port
-    volumes:
-    - ./etc/signoz/prometheus.yml:/workspace/prometheus.yml
-    - ./etc/signoz/dashboards:/root/config/dashboards
-    - sqlite:/var/lib/signoz/
-    environment:
-    - SIGNOZ_ALERTMANAGER_PROVIDER=signoz
-    - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://clickhouse:9000
-    - SIGNOZ_SQLSTORE_SQLITE_PATH=/var/lib/signoz/signoz.db
-    - DASHBOARDS_PATH=/root/config/dashboards
-    - STORAGE=clickhouse
-    - GODEBUG=netdns=go
-    - TELEMETRY_ENABLED=true
-    - DEPLOYMENT_TYPE=docker-standalone-amd
-    - DOT_METRICS_ENABLED=true
-    healthcheck:
-      test:
-        - CMD
-        - wget
-        - --spider
-        - -q
-        - localhost:8080/api/v1/health
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  otel-collector:
-    !!merge <<: *common
-    image: otel/opentelemetry-collector-contrib:0.135.0
-    container_name: otel
-    command:
-    - "--config=/conf/config.yaml"
-    - "--feature-gates=service.profilesSupport"
-    volumes:
-    - ./etc/otel/otel-collector-signoz.yaml:/conf/config.yaml
-    ports:
-    - "4317:4317" # OTLP gRPC receiver
-    - "4318:4318" # OTLP http receiver
-    - "8889:8889" # Prometheus metrics exporter
-    environment:
-    - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://signoz:5317
-    - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://signoz:5317
-    - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://signoz:5317
+  # signoz:
+  #   <<: *db-depend
+  #   image: signoz/signoz:${VERSION:-v0.95.0}
+  #   container_name: signoz
+  #   command:
+  #     - --config=/root/config/prometheus.yml
+  #   ports:
+  #   - "8080:8080" # signoz port
+  #   - "5317:4317" # OTLP gRPC receiver
+  #   - "5318:4318" # OTLP http receiver
+  #   - "5060:6060" # pprof port
+  #   volumes:
+  #   - ./etc/signoz/prometheus.yml:/workspace/prometheus.yml
+  #   - ./etc/signoz/dashboards:/root/config/dashboards
+  #   - sqlite:/var/lib/signoz/
+  #   environment:
+  #   - SIGNOZ_ALERTMANAGER_PROVIDER=signoz
+  #   - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://clickhouse:9000
+  #   - SIGNOZ_SQLSTORE_SQLITE_PATH=/var/lib/signoz/signoz.db
+  #   - DASHBOARDS_PATH=/root/config/dashboards
+  #   - STORAGE=clickhouse
+  #   - GODEBUG=netdns=go
+  #   - DEPLOYMENT_TYPE=docker-standalone-amd
+  #   - TELEMETRY_ENABLED=false
+  #   - DOT_METRICS_ENABLED=false
+  #   healthcheck:
+  #     test:
+  #       - CMD
+  #       - wget
+  #       - --spider
+  #       - -q
+  #       - localhost:8080/api/v1/health
+  #     interval: 30s
+  #     timeout: 5s
+  #     retries: 3
 
 volumes:
   clickhouse:

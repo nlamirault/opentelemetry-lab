@@ -3,231 +3,215 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+x-common: &common
+  networks:
+  - opentelemetry-lab
+  restart: unless-stopped
+  logging:
+    options:
+      max-size: 50m
+      max-file: "3"
+
+x-custom:
+  etcd_initial_cluster_token: &etcd_initial_cluster_token "--initial-cluster-token=etcd-cluster"
+  etcd_common_settings: &etcd_common_settings
+    image: "${ETCD_REGISTRY:-quay.io}/${ETCD_NAMESPACE:-coreos}/etcd:${ETCD_VERSION:-v3.5.10}"
+    entrypoint: /usr/local/bin/etcd
+  greptimedb_image: &greptimedb_image "${GREPTIMEDB_REGISTRY:-docker.io}/${GREPTIMEDB_NAMESPACE:-greptime}/greptimedb:${GREPTIMEDB_VERSION:-latest}"
+
 services:
+
   otel-collector:
+    <<: *common
     image: otel/opentelemetry-collector-contrib:0.135.0
     container_name: otel
     command:
     - "--config=/conf/config.yaml"
+    - "--feature-gates=service.profilesSupport"
     volumes:
-    - ./etc/otel/otel-collector.yaml:/conf/config.yaml
+    - ./etc/otel/otel-collector-greptimedb.yaml:/conf/config.yaml
     ports:
     - "4317:4317" # OTLP gRPC receiver
     - "4318:4318" # OTLP http receiver
     - "8889:8889" # Prometheus metrics exporter
     environment:
-      OTLP_LOGS_ENDPOINT: "http://greptimedb:4000/v1/otlp"
-      OTLP_METRICS_ENDPOINT: "http://greptimedb:4000/v1/otlp"
-      OTLP_TRACES_ENDPOINT: "http://greptimedb:4000/v1/otlp"
-    networks:
-    - opentelemetry-lab
+    - GREPTIME_LOGS_DB_NAME=opentelemetry_lab_logs
+    - GREPTIME_METRICS_DB_NAME=opentelemetry_lab_metrics
+    - GREPTIME_TRACES_DB_NAME=opentelemetry_lab_traces
+    - OTEL_EXPORTER_OTLP_PROTOCOL=http
+    - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://frontend0:4000/v1/otlp
+    - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://frontend0:4000/v1/otlp
+    - OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT=http://frontend0:4000/v1/otlp
+    - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://frontend0:4000/v1/otlp
 
-  alloy:
-    image: grafana/alloy:v1.4.0
-    container_name: alloy
+  etcd0:
+    <<: [*common, *etcd_common_settings]
+    container_name: etcd0
+    ports:
+      - 2379:2379
+      - 2380:2380
     command:
-    - "run"
-    - "--server.http.listen-addr=0.0.0.0:12345"
-    - '--config.extra-args="-config.expand-env"'
-    - "/conf/config.alloy"
+      - --name=etcd0
+      - --data-dir=/var/lib/etcd
+      - --initial-advertise-peer-urls=http://etcd0:2380
+      - --listen-peer-urls=http://0.0.0.0:2380
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://etcd0:2379
+      - --heartbeat-interval=250
+      - --election-timeout=1250
+      - --initial-cluster=etcd0=http://etcd0:2380
+      - --initial-cluster-state=new
+      - *etcd_initial_cluster_token
     volumes:
-    - ./etc/alloy/config.alloy:/conf/config.alloy
-    ports:
-    - "12345:12345"
-    environment:
-    - ALLOY_PORT_APP_RECEIVER=12345
-    networks:
-    - opentelemetry-lab
+      - etcd:/var/lib/etcd
+    healthcheck:
+      test: [ "CMD", "etcdctl", "--endpoints=http://etcd0:2379", "endpoint", "health" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
-  greptimedb:
-    image: greptime/greptimedb:v0.7.1
-    container_name: greptimedb
-    ports:
-    - "4000:4000"
-    - "4001:4001"
-    networks:
-    - opentelemetry-lab
-    command:
-      standalone start
-      --user-provider=static_user_provider:cmd:greptime_user=greptime_pwd
-      --http-addr="0.0.0.0:4000"
-      --rpc-addr="0.0.0.0:4001"
-
-  grafana:
-    image: grafana/grafana:12.1.0
-    container_name: grafana
-    ports:
-    - "3000:3000"
-    volumes:
-    - ./etc/grafana/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
-    - ./etc/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
-    - ./etc/grafana/dashboards:/var/lib/grafana/dashboards
-    environment:
-      GF_AUTH_ANONYMOUS_ENABLED: "true"
-      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
-      GF_AUTH_DISABLE_LOGIN_FORM: "true"
-      GF_FEATURE_TOGGLES_ENABLE: "timeSeriesTable,traceqlEditor"
-    networks:
-    - opentelemetry-lab
-
-  otel-python:
-    build: ./apps/otel-python/
-    ports:
-    - "8000:8000"
-    environment:
-    - EXPOSE_PORT=8000
-    - TARGET_ONE_SVC=http://otel-js:3001
-    - TARGET_TWO_SVC=http://otel-java:8080
-    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-    - OTEL_EXPORTER_OTLP_INSECURE=true
-    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-    - OTEL_TRACES_EXPORTER=otlp
-    - OTEL_METRICS_EXPORTER=otlp
-    - OTEL_LOGS_EXPORTER=otlp
-    - OTEL_SERVICE_NAME=otel-python
-    command: "opentelemetry-instrument python main.py"
-    networks:
-    - opentelemetry-lab
-
-  otel-java:
-    build: ./apps/otel-java/
-    container_name: otel-java
-    ports:
-    - "8080:8080"
-    environment:
-    - EXPOSE_PORT=8080
-    - TARGET_ONE_SVC=http://otel-python:8000
-    - TARGET_TWO_SVC=http://otel-js:3001
-    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-    - OTEL_EXPORTER_OTLP_INSECURE=true
-    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-    - OTEL_TRACES_EXPORTER=otlp
-    - OTEL_METRICS_EXPORTER=otlp
-    - OTEL_LOGS_EXPORTER=otlp
-    - OTEL_SERVICE_NAME=otel-java
-    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=docker,host.name=otel-demo
-    command: "java -javaagent:/opentelemetry-javaagent.jar -jar /app.jar"
-    networks:
-    - opentelemetry-lab
-
-  otel-js:
-    build: ./apps/otel-js/
-    container_name: otel-js
-    ports:
-    - "3001:3001"
-    environment:
-    - EXPOSE_PORT=3001
-    - TARGET_ONE_SVC=http://otel-go:8888
-    - TARGET_TWO_SVC=http://otel-rust:9999
-    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-    - OTEL_TRACES_EXPORTER=otlp
-    - OTEL_METRICS_EXPORTER=otlp
-    - OTEL_LOGS_EXPORTER=otlp
-    - OTEL_SERVICE_NAME=otel-js
-    command: "node --require '@opentelemetry/auto-instrumentations-node/register' app.js"
-    networks:
-    - opentelemetry-lab
-
-  otel-rust:
-    build: ./apps/otel-rust/
-    container_name: otel-rust
-    ports:
-    - "9999:9999"
-    environment:
-    - EXPOSE_PORT=9999
-    - TARGET_ONE_SVC=http://otel-go:8888
-    - TARGET_TWO_SVC=http://otel-python:8000
-    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-    - OTEL_TRACES_EXPORTER=otlp
-    - OTEL_METRICS_EXPORTER=otlp
-    - OTEL_LOGS_EXPORTER=otlp
-    - OTEL_SERVICE_NAME=otel-rust
-    # command: "otel-rust"
-    networks:
-    - opentelemetry-lab
-
-  otel-go:
-    build: ./apps/otel-go/
-    container_name: otel-go
-    ports:
-    - "8888:8888"
-    environment:
-    - EXPOSE_PORT=8888
-    - TARGET_ONE_SVC=http://otel-rust:9999
-    - TARGET_TWO_SVC=http://otel-java:8080
-    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-    - OTEL_TRACES_EXPORTER=otlp
-    - OTEL_METRICS_EXPORTER=otlp
-    - OTEL_LOGS_EXPORTER=otlp
-    - OTEL_SERVICE_NAME=otel-go
-    # command: "otel-go"
-    networks:
-    - opentelemetry-lab
-
-  # otel-swift:
-  #   build: ./apps/otel-swift/
-  #   container_name: otel-swift
+  # etcd-tls:
+  #   <<: [*common, *etcd_common_settings]
+  #   container_name: etcd-tls
   #   ports:
-  #   - "9191:9191"
+  #     - 2378:2378
+  #     - 2381:2381
+  #   command:
+  #     - --name=etcd-tls
+  #     - --data-dir=/var/lib/etcd
+  #     - --initial-advertise-peer-urls=https://etcd-tls:2381
+  #     - --listen-peer-urls=https://0.0.0.0:2381
+  #     - --listen-client-urls=https://0.0.0.0:2378
+  #     - --advertise-client-urls=https://etcd-tls:2378
+  #     - --heartbeat-interval=250
+  #     - --election-timeout=1250
+  #     - --initial-cluster=etcd-tls=https://etcd-tls:2381
+  #     - --initial-cluster-state=new
+  #     - --initial-cluster-token=etcd-tls-cluster
+  #     - --cert-file=/certs/server.crt
+  #     - --key-file=/certs/server-key.pem
+  #     - --peer-cert-file=/certs/server.crt
+  #     - --peer-key-file=/certs/server-key.pem
+  #     - --trusted-ca-file=/certs/ca.crt
+  #     - --peer-trusted-ca-file=/certs/ca.crt
+  #     - --client-cert-auth
+  #     - --peer-client-cert-auth
+  #   volumes:
+  #     - greptimedb/etcd-tls:/var/lib/etcd
+  #     - greptimedb/certs:/certs:ro
   #   environment:
-  #   - EXPOSE_PORT=9191
-  #   - TARGET_ONE_SVC=http://otel-rust:9999
-  #   - TARGET_TWO_SVC=http://otel-js:3001
-  #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-  #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-  #   - OTEL_TRACES_EXPORTER=otlp
-  #   - OTEL_METRICS_EXPORTER=otlp
-  #   - OTEL_LOGS_EXPORTER=otlp
-  #   - OTEL_SERVICE_NAME=otel-swift
-  #   - LOG_LEVEL=debug
-  #   command: ["serve", "--env", "production", "--hostname", "0.0.0.0", "--port", "9191"]
+  #     - ETCDCTL_API=3
+  #     - ETCDCTL_CACERT=/certs/ca.crt
+  #     - ETCDCTL_CERT=/certs/server.crt
+  #     - ETCDCTL_KEY=/certs/server-key.pem
+  #   healthcheck:
+  #     test: [ "CMD", "etcdctl", "--endpoints=https://etcd-tls:2378", "--cacert=/certs/ca.crt", "--cert=/certs/server.crt", "--key=/certs/server-key.pem", "endpoint", "health" ]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
 
-  otel-ts:
-    build: ./apps/otel-ts/
-    container_name: otel-ts
+  metasrv:
+    <<: *common
+    image: *greptimedb_image
+    container_name: metasrv
     ports:
-    - "3333:3333"
-    environment:
-    - EXPOSE_PORT=3333
-    - TARGET_ONE_SVC=http://otel-gp:8888
-    - TARGET_TWO_SVC=http://otel-rust:9999
-    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-    - OTEL_TRACES_EXPORTER=otlp
-    - OTEL_METRICS_EXPORTER=otlp
-    - OTEL_LOGS_EXPORTER=otlp
-    - OTEL_SERVICE_NAME=otel-ts
-    command: "node --require '@opentelemetry/auto-instrumentations-node/register' dist/index.js"
-    networks:
-    - opentelemetry-lab
+      - 3002:3002
+      - 3000:3000
+    command:
+      - metasrv
+      - start
+      - --rpc-bind-addr=0.0.0.0:3002
+      - --rpc-server-addr=metasrv:3002
+      - --store-addrs=etcd0:2379
+      - --http-addr=0.0.0.0:3000
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://metasrv:3000/health" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    depends_on:
+      etcd0:
+        condition: service_healthy
 
-  otel-react:
-    build: ./apps/otel-react/
-    container_name: otel-react
+  datanode0:
+    <<: *common
+    image: *greptimedb_image
+    container_name: datanode0
     ports:
-    - "3434:3434"
-    environment:
-    - PORT=3434
-    - TARGET_ONE_SVC=http://otel-js:3001
-    - TARGET_TWO_SVC=http://otel-java:8080
-    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-    - OTEL_TRACES_EXPORTER=otlp
-    - OTEL_METRICS_EXPORTER=otlp
-    - OTEL_LOGS_EXPORTER=otlp
-    - OTEL_SERVICE_NAME=otel-react
-    command: ""
-    networks:
-    - opentelemetry-lab
+      - 3001:3001
+      - 5000:5000
+    command:
+      - datanode
+      - start
+      - --node-id=0
+      - --data-home=/greptimedb_data
+      - --rpc-bind-addr=0.0.0.0:3001
+      - --rpc-server-addr=datanode0:3001
+      - --metasrv-addrs=metasrv:3002
+      - --http-addr=0.0.0.0:5000
+    volumes:
+      - datanode:/greptimedb_data
+    healthcheck:
+      test: [ "CMD", "curl", "-fv", "http://datanode0:5000/health" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      metasrv:
+        condition: service_healthy
+
+  frontend0:
+    <<: *common
+    image: *greptimedb_image
+    container_name: frontend0
+    ports:
+      - 4000:4000
+      - 4001:4001
+      - 4002:4002
+      - 4003:4003
+    command:
+      - frontend
+      - start
+      - --metasrv-addrs=metasrv:3002
+      - --http-addr=0.0.0.0:4000
+      - --rpc-bind-addr=0.0.0.0:4001
+      - --mysql-addr=0.0.0.0:4002
+      - --postgres-addr=0.0.0.0:4003
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://frontend0:4000/health" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    depends_on:
+      datanode0:
+        condition: service_healthy
+
+  flownode0:
+    <<: *common
+    image: *greptimedb_image
+    container_name: flownode0
+    ports:
+      - 4004:4004
+      - 4005:4005
+    command:
+      - flownode
+      - start
+      - --node-id=0
+      - --metasrv-addrs=metasrv:3002
+      - --rpc-bind-addr=0.0.0.0:4004
+      - --rpc-server-addr=flownode0:4004
+      - --http-addr=0.0.0.0:4005
+    depends_on:
+      frontend0:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://flownode0:4005/health" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
 volumes:
-  tempo-data:
-  loki-data:
-
-networks:
-  opentelemetry-lab:
-    driver: bridge
-    name: opentelemetry-lab
+  etcd:
+    name: greptimedb-etcd
+  datanode:
+    name: greptimedb-datanode
