@@ -11,15 +11,18 @@ import StdoutExporter
 import Vapor
 
 struct OTelResourceProvider {
-    let serviceName: String = Environment.get("OTEL_SERVICE_NAME") ?? "otel-swift"
-    func getResource() -> Resource {
-        let customResource: Resource = Resource.init(attributes: [
-            ResourceAttributes.serviceName.rawValue: AttributeValue.string(serviceName),
-            ResourceAttributes.telemetrySdkName.rawValue: AttributeValue.string("opentelemetry"),
-            ResourceAttributes.telemetrySdkLanguage.rawValue: AttributeValue.string("swift"),
-            ResourceAttributes.telemetrySdkVersion.rawValue: AttributeValue.string(Resource.OTEL_SWIFT_SDK_VERSION)
-        ])
-        let defaultResources: Resource = DefaultResources().get()
-        return defaultResources.merging(other: customResource)
-    }
+  let serviceName: String = Environment.get("OTEL_SERVICE_NAME") ?? "otel-swift"
+  func getResource() -> Resource {
+    let customResource: Resource = Resource.init(attributes: [
+      SemanticConventions.Service.name.rawValue: AttributeValue.string(serviceName),
+      SemanticConventions.Service.version.rawValue: AttributeValue.string("1.0.0"),
+      SemanticConventions.Telemetry.distroName.rawValue: AttributeValue.string("swift"),
+      SemanticConventions.Telemetry.sdkName.rawValue: AttributeValue.string("opentelemetry"),
+      SemanticConventions.Telemetry.sdkVersion.rawValue: AttributeValue.string(
+        Resource.OTEL_SWIFT_SDK_VERSION),
+    ])
+    let defaultResources: Resource = DefaultResources().get()
+    return defaultResources.merging(other: customResource)
+  }
+
 }
