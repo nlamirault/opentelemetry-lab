@@ -69,7 +69,7 @@ class OpenTelemetryTracer {
 
     func getTracer() -> OpenTelemetryApi.Tracer {
         return OpenTelemetry.instance.tracerProvider.get(
-            instrumentationName: Constants.applicationName, // Instrumentation.instrumentationScopeName,
+            instrumentationName: Constants.applicationName,
             instrumentationVersion: Instrumentation.instrumentationVersion
         )
     }

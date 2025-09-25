@@ -9,9 +9,11 @@ struct VersionResponse: Content {
 
 func routes(_ app: Application) throws {
 
+  let logger: OpenTelemetryApi.Logger = OpenTelemetryLogger.instance.getLogger()
+
   app.get { req async in
     req.logger.info("Root handler")
-    let logger: OpenTelemetryApi.Logger = OpenTelemetryLogger.instance.getLogger()
+    // let logger: OpenTelemetryApi.Logger = OpenTelemetryLogger.instance.getLogger()
     logger.log("[handller] Root", severity: .info)
     let tracer: OpenTelemetryApi.Tracer = OpenTelemetryTracer.instance.getTracer()
     let span: any Span = tracer.spanBuilder(spanName: "root").startSpan()
@@ -22,15 +24,15 @@ func routes(_ app: Application) throws {
 
   app.get("health") { req async -> String in
     req.logger.info("[handler] Health")
-    let logger: OpenTelemetryApi.Logger = OpenTelemetryLogger.instance.getLogger()
+    // let logger: OpenTelemetryApi.Logger = OpenTelemetryLogger.instance.getLogger()
     logger.log("Handler: health", severity: .info)
     return "Ok"
   }
 
   app.get("version") { req async -> VersionResponse in
     req.logger.info("[handler] Version")
-    let logger: OpenTelemetryApi.Logger = OpenTelemetryLogger.instance.getLogger()
-    logger.log("Handler: health", severity: .info)
+    // let logger: OpenTelemetryApi.Logger = OpenTelemetryLogger.instance.getLogger()
+    logger.log("Handler: version", severity: .info)
     return VersionResponse(version: "v1.0.0")
   }
 }

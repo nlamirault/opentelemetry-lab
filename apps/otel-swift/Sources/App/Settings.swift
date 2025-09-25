@@ -1,4 +1,4 @@
-import AppKit
+import Foundation
 
 internal let runtimeVersion: String = ProcessInfo().operatingSystemVersionString
 
