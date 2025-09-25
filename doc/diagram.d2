@@ -21,11 +21,11 @@ title: {
 }
 
 classes: {
-  docker: {
-    label: Docker
-    icon: https://icons.terrastruct.com/dev%2Fdocker.svg
-    shape: image
-  }
+  # docker: {
+  #   label: Docker
+  #   icon: https://icons.terrastruct.com/dev%2Fdocker.svg
+  #   shape: image
+  # }
 
   # apps
 
@@ -77,6 +77,14 @@ classes: {
     shape: image
   }
 
+  # Database
+
+  clickhouse: {
+    label: Clickhouse
+    icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/clickhouse.svg
+    shape: image
+  }
+
   # Observability
 
   opentelemetry: {
@@ -84,9 +92,10 @@ classes: {
     icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/opentelemetry/icon/color/opentelemetry-icon-color.svg
     shape: image
   }
+
   alloy: {
     label: Grafana Alloy
-    icon: https://raw.githubusercontent.com/grafana/alloy/main/docs/sources/assets/alloy_icon_orange.svg
+    icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/alloy.svg
     shape: image
   }
 
@@ -94,7 +103,13 @@ classes: {
 
   grafana: {
     label: Grafana
-    icon: https://diagrams.mingrammer.com/img/resources/onprem/monitoring/grafana.png
+    icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/grafana.svg
+    shape: image
+  }
+
+  signoz: {
+    label: Signoz
+    icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/signoz.svg
     shape: image
   }
 
@@ -102,7 +117,7 @@ classes: {
 
   prometheus: {
     label: Prometheus
-    icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/prometheus/icon/color/prometheus-icon-color.svg
+    icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/prometheus.svg
     shape: image
   }
   loki: {
@@ -128,24 +143,23 @@ classes: {
 }
 
 docker: docker {
-  docker.class: docker
+  # docker.class: docker
 
-  monitoring: Monitoring {
-    prometheus.class: prometheus
-    # mimir.class: mimir
-  }
+  # monitoring: Monitoring {
+  #   prometheus.class: prometheus
+  # }
 
-  logging: Logging {
-    loki.class: loki
-  }
+  # logging: Logging {
+  #   loki.class: loki
+  # }
 
-  tracing: Tracing {
-    tempo.class: tempo
-  }
+  # tracing: Tracing {
+  #   tempo.class: tempo
+  # }
 
-  profiling: Profiling {
-    pyroscope.class: pyroscope
-  }
+  # profiling: Profiling {
+  #   pyroscope.class: pyroscope
+  # }
 
   otel: OpenTelemetry {
     otel_collector.class: opentelemetry
@@ -153,15 +167,28 @@ docker: docker {
 
     alloy.class: alloy
 
-    otel_collector -> _.monitoring.prometheus: {class: dash}
-    otel_collector -> _.logging.loki: {class: dash}
-    otel_collector -> _.tracing.tempo: {class: dash}
-    otel_collector -> _.profiling.pyroscope: {class: dash}
+    otel_collector -> _.lgtm.prometheus: {class: dash}
+    otel_collector -> _.lgtm.loki: {class: dash}
+    otel_collector -> _.lgtm.tempo: {class: dash}
+    otel_collector -> _.lgtm.pyroscope: {class: dash}
+
+    # otel_collector -> _.monitoring.prometheus: {class: dash}
+    # otel_collector -> _.logging.loki: {class: dash}
+    # otel_collector -> _.tracing.tempo: {class: dash}
+    # otel_collector -> _.profiling.pyroscope: {class: dash}
+
     alloy -> otel_collector: {class: dash}
     # alloy -> _.profiling.pyroscope: {class: dash}
+
+    # otel_collector -> _.db.clickhouse: {class: dash}
+    otel_collector -> _.signoz.clickhouse: {class: dash}
   }
 
-  apps: Appslications {
+  # db: Database {
+  #   clickhouse.class: clickhouse
+  # }
+
+  apps: Applications {
     go.class: go
     rust.class: rust
     java.class: java
@@ -181,13 +208,35 @@ docker: docker {
     react -> _.otel.alloy
   }
 
-  observability: Observability {
+  lgtm: LGTM {
+    prometheus.class: prometheus
+    loki.class: loki
+    tempo.class: tempo
+    pyroscope.class: pyroscope
     grafana.class: grafana
 
-    grafana -> _.monitoring.prometheus
-    grafana -> _.logging.loki
-    grafana -> _.tracing.tempo
-    grafana -> _.profiling.pyroscope
+    grafana -> prometheus
+    grafana -> loki
+    grafana -> tempo
+    grafana -> pyroscope
   }
-}
 
+  signoz: Signoz {
+    signoz.class: signoz
+    clickhouse.class: clickhouse
+
+    signoz -> clickhouse
+  }
+
+  # observability: Observability {
+  #   grafana.class: grafana
+  #   signoz.class: signoz
+
+  #   grafana -> _.monitoring.prometheus
+  #   grafana -> _.logging.loki
+  #   grafana -> _.tracing.tempo
+  #   grafana -> _.profiling.pyroscope
+
+  #   signoz -> _.db.clickhouse
+  # }
+}

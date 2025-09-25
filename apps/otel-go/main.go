@@ -67,20 +67,6 @@ func main() {
 		log.Fatal("OpenTelemetry protocol not specified")
 	}
 
-	// extraResources, _ := sdkresource.New(
-	// 	ctx,
-	// 	sdkresource.WithOS(),
-	// 	sdkresource.WithProcess(),
-	// 	sdkresource.WithContainer(),
-	// 	sdkresource.WithHost(),
-	// 	sdkresource.WithAttributes(
-	// 		// semconv.SchemaURL,
-	// 		semconv.ServiceName(serviceName)),
-	// )
-	// resource, _ := sdkresource.Merge(
-	// 	sdkresource.Default(),
-	// 	extraResources,
-	// )
 	resource, err := telemetry.CreateResource(ctx, serviceName)
 	if err != nil {
 		log.Fatal(err)
