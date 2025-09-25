@@ -1,0 +1,9 @@
+# Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+networks:
+  opentelemetry-lab:
+    driver: bridge
+    name: opentelemetry-lab
