@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
 from opentelemetry import metrics
 from opentelemetry import trace
 from opentelemetry.sdk import resources

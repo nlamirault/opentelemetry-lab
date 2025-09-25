@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
 const opentelemetry = require("@opentelemetry/sdk-node");
 const { DiagConsoleLogger, DiagLogLevel, diag } = require("@opentelemetry/api");
 const {

@@ -1,5 +1,4 @@
-# Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
-#
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 # SPDX-License-Identifier: Apache-2.0
 
 BANNER = O P E N T E L E M E T R Y / L A B

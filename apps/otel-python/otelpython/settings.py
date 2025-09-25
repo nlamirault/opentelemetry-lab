@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
 from os import environ
 
 EXPOSE_PORT = int(environ.get("EXPOSE_PORT", default="8000"))

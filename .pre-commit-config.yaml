@@ -1,8 +1,7 @@
----
-# Copyright (c) Nicolas Lamirault <nicolas.lamirault@gmail.com>
-#
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 # SPDX-License-Identifier: Apache-2.0
 
+---
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
@@ -32,7 +31,8 @@ repos:
   hooks:
   - id: insert-license
     stages: [commit]
-    files: (\.go|\.rs|\.js|\.java|\.json5)
+    files: (\.go|\.rs|\.js|\.ts|\.java|\.swift|\.tsx|\.json5)
+    exclude: (\.json)
     args:
     - --license-filepath
     - hack/LICENSE.txt

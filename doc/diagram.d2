@@ -21,12 +21,6 @@ title: {
 }
 
 classes: {
-  # docker: {
-  #   label: Docker
-  #   icon: https://icons.terrastruct.com/dev%2Fdocker.svg
-  #   shape: image
-  # }
-
   # apps
 
   go: {
@@ -113,8 +107,20 @@ classes: {
     shape: image
   }
 
-  greptimedb {
-    label: GreptimeDB
+  greptimedb_fontend {
+    label: Frontend
+    icon: https://greptime.com/logo/icon/logo-deep.svg
+    shape: image
+  }
+
+  greptimedb_datanode {
+    label: Datanode
+    icon: https://greptime.com/logo/icon/logo-deep.svg
+    shape: image
+  }
+
+  greptimedb_metasrv {
+    label: MetaServer
     icon: https://greptime.com/logo/icon/logo-deep.svg
     shape: image
   }
@@ -148,9 +154,7 @@ classes: {
   }
 }
 
-docker: docker {
-  # docker.class: docker
-
+lab: Lab {
   # monitoring: Monitoring {
   #   prometheus.class: prometheus
   # }
@@ -188,7 +192,7 @@ docker: docker {
 
     otel_collector -> _.signoz.signoz: {class: dash}
 
-    otel_collector -> _.greptimedb.greptimedb: {class: dash}
+    otel_collector -> _.greptimedb.frontend: {class: dash}
   }
 
   # db: Database {
@@ -236,7 +240,12 @@ docker: docker {
   }
 
   greptimedb: GreptimeDB {
-    greptimedb.class: greptimedb
+    frontend.class: greptimedb_fontend
+    datanode.class: greptimedb_datanode
+    metasrv.class: greptimedb_metasrv
+
+    frontend -> datanode
+    frontend -> metasrv
   }
 
   # observability: Observability {

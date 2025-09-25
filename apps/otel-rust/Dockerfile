@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
 FROM rust:1.81
 COPY . /usr/src/otel-rust/
 WORKDIR /usr/src/otel-rust/
