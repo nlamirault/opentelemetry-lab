@@ -14,7 +14,11 @@ datasources:
   typeName: Prometheus
   access: proxy
   url: http://prometheus:9090
-  editable: true
+  password: ''
+  user: ''
+  database: ''
+  basicAuth: false
+  isDefault: true
   jsonData:
     timeInterval: 60s
     exemplarTraceIdDestinations:
@@ -22,11 +26,12 @@ datasources:
       datasourceUid: tempo
       urlDisplayLabel: 'Trace: $${__value.raw}'
     httpMethod: POST
+  readOnly: false
+  editable: true
 - uid: loki
   name: Loki
   type: loki
   url: http://loki:3100
-  editable: true
   jsonData:
     derivedFields:
     - name: 'trace_id'
@@ -42,7 +47,11 @@ datasources:
   typeName: Tempo
   access: proxy
   url: http://tempo:3200
-  editable: true
+  password: ''
+  user: ''
+  database: ''
+  basicAuth: false
+  isDefault: false
   jsonData:
     tracesToLogsV2:
       customQuery: true
@@ -59,10 +68,5 @@ datasources:
       enabled: true
     lokiSearch:
       datasourceUid: 'loki'
-- name: Pyroscope
-  orgId: 1
-  type: grafana-pyroscope-datasource
-  uid: pyroscope
-  access: proxy
-  url: http://pyroscope:4040
+  readOnly: false
   editable: true
