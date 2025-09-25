@@ -8,8 +8,8 @@
 
 You could choose which Observability stack you want to use:
 
-- [x] lgtm: Loki, Tempo, Prometheus
-- [x] clickhouse: Clickhouse, Qryn
+- [x] lgtm: Prometheus, Loki, Tempo
+- [x] clickhouse: Clickhouse
 - [x] greptimedb: GreptimeDB
 
 ```shell

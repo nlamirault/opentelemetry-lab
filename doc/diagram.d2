@@ -113,6 +113,12 @@ classes: {
     shape: image
   }
 
+  greptimedb {
+    label: GreptimeDB
+    icon: https://greptime.com/logo/icon/logo-deep.svg
+    shape: image
+  }
+
   # Telemetry
 
   prometheus: {
@@ -180,8 +186,9 @@ docker: docker {
     alloy -> otel_collector: {class: dash}
     # alloy -> _.profiling.pyroscope: {class: dash}
 
-    # otel_collector -> _.db.clickhouse: {class: dash}
-    otel_collector -> _.signoz.clickhouse: {class: dash}
+    otel_collector -> _.signoz.signoz: {class: dash}
+
+    otel_collector -> _.greptimedb.greptimedb: {class: dash}
   }
 
   # db: Database {
@@ -226,6 +233,10 @@ docker: docker {
     clickhouse.class: clickhouse
 
     signoz -> clickhouse
+  }
+
+  greptimedb: GreptimeDB {
+    greptimedb.class: greptimedb
   }
 
   # observability: Observability {
