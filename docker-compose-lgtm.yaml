@@ -20,7 +20,7 @@ services:
     - "--config=/conf/config.yaml"
     - "--feature-gates=service.profilesSupport"
     volumes:
-    - ./etc/otel/otel-collector.yaml:/conf/config.yaml
+    - ./etc/otel/otel-collector-lgtm.yaml:/conf/config.yaml
     ports:
     - "4317:4317" # OTLP gRPC receiver
     - "4318:4318" # OTLP http receiver
@@ -57,6 +57,8 @@ services:
     volumes:
     - ./etc/loki/config.yaml:/etc/loki/config.yaml
     - loki-data:/loki
+    ports:
+    - "3100:3100"
 
   tempo:
     <<: *common
@@ -67,8 +69,8 @@ services:
     - ./etc/tempo/config.yaml:/etc/tempo/config.yaml
     - tempo-data:/var/tempo
     ports:
-    - "4417:4317" # OTLP gRPC receiver
-    - "4418:4318" # OTLP http receiver
+    - "3417:4317" # OTLP gRPC receiver
+    - "3418:4318" # OTLP http receiver
 
   pyroscope:
     <<: *common
@@ -79,26 +81,24 @@ services:
     - ./etc/pyroscope/config.yaml:/etc/pyroscope/config.yaml
     - pyroscope-data:/var/pyroscope
     ports:
-    - "9097:9097"
+    - "3097:9097"
 
   prometheus:
     <<: *common
     image: prom/prometheus:v3.5.0
     container_name: prometheus
-    ports:
-    - "9090:9090"
     volumes:
     - ./etc/prometheus/prometheus.yml:/workspace/prometheus.yml
     command:
     - --config.file=/workspace/prometheus.yml
     - --web.enable-otlp-receiver
+    ports:
+    - "3090:9090"
 
   grafana:
     <<: *common
     image: grafana/grafana:12.1.0
     container_name: grafana
-    ports:
-    - "3000:3000"
     volumes:
     - ./etc/grafana/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
     - ./etc/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
@@ -108,6 +108,8 @@ services:
       GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
       GF_AUTH_DISABLE_LOGIN_FORM: "true"
       GF_FEATURE_TOGGLES_ENABLE: "timeSeriesTable,traceqlEditor"
+    ports:
+    - "3000:3000"
 
 volumes:
   tempo-data:

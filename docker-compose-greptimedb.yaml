@@ -47,8 +47,8 @@ services:
     <<: [*common, *etcd_common_settings]
     container_name: etcd0
     ports:
-      - 2379:2379
-      - 2380:2380
+      - 4379:2379
+      - 4380:2380
     command:
       - --name=etcd0
       - --data-dir=/var/lib/etcd
@@ -69,59 +69,19 @@ services:
       timeout: 3s
       retries: 5
 
-  # etcd-tls:
-  #   <<: [*common, *etcd_common_settings]
-  #   container_name: etcd-tls
-  #   ports:
-  #     - 2378:2378
-  #     - 2381:2381
-  #   command:
-  #     - --name=etcd-tls
-  #     - --data-dir=/var/lib/etcd
-  #     - --initial-advertise-peer-urls=https://etcd-tls:2381
-  #     - --listen-peer-urls=https://0.0.0.0:2381
-  #     - --listen-client-urls=https://0.0.0.0:2378
-  #     - --advertise-client-urls=https://etcd-tls:2378
-  #     - --heartbeat-interval=250
-  #     - --election-timeout=1250
-  #     - --initial-cluster=etcd-tls=https://etcd-tls:2381
-  #     - --initial-cluster-state=new
-  #     - --initial-cluster-token=etcd-tls-cluster
-  #     - --cert-file=/certs/server.crt
-  #     - --key-file=/certs/server-key.pem
-  #     - --peer-cert-file=/certs/server.crt
-  #     - --peer-key-file=/certs/server-key.pem
-  #     - --trusted-ca-file=/certs/ca.crt
-  #     - --peer-trusted-ca-file=/certs/ca.crt
-  #     - --client-cert-auth
-  #     - --peer-client-cert-auth
-  #   volumes:
-  #     - greptimedb/etcd-tls:/var/lib/etcd
-  #     - greptimedb/certs:/certs:ro
-  #   environment:
-  #     - ETCDCTL_API=3
-  #     - ETCDCTL_CACERT=/certs/ca.crt
-  #     - ETCDCTL_CERT=/certs/server.crt
-  #     - ETCDCTL_KEY=/certs/server-key.pem
-  #   healthcheck:
-  #     test: [ "CMD", "etcdctl", "--endpoints=https://etcd-tls:2378", "--cacert=/certs/ca.crt", "--cert=/certs/server.crt", "--key=/certs/server-key.pem", "endpoint", "health" ]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-
   metasrv:
     <<: *common
     image: *greptimedb_image
     container_name: metasrv
     ports:
-      - 3002:3002
-      - 3000:3000
+      - 4002:3002
+      - 4006:3000
     command:
       - metasrv
       - start
+      - --store-addrs=etcd0:2379
       - --rpc-bind-addr=0.0.0.0:3002
       - --rpc-server-addr=metasrv:3002
-      - --store-addrs=etcd0:2379
       - --http-addr=0.0.0.0:3000
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://metasrv:3000/health" ]
@@ -137,8 +97,8 @@ services:
     image: *greptimedb_image
     container_name: datanode0
     ports:
-      - 3001:3001
-      - 5000:5000
+      - 4001:3001
+      - 4007:5000
     command:
       - datanode
       - start
