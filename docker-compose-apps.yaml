@@ -19,8 +19,8 @@ services:
   #   - "8000:8000"
   #   environment:
   #   - EXPOSE_PORT=8000
-  #   - TARGET_ONE_SVC=http://otel-js:3001
-  #   - TARGET_TWO_SVC=http://otel-java:8080
+  #   - TARGET_ONE_SVC=http://otel-js:7700
+  #   - TARGET_TWO_SVC=http://otel-java:7750
   #   # OpenTelemetry with GRPC
   #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
   #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
@@ -41,8 +41,8 @@ services:
   #   - "8080:8080"
   #   environment:
   #   - EXPOSE_PORT=8080
-  #   - TARGET_ONE_SVC=http://otel-python:8000
-  #   - TARGET_TWO_SVC=http://otel-js:3001
+  #   - TARGET_ONE_SVC=http://otel-python:7740
+  #   - TARGET_TWO_SVC=http://otel-js:7700
   #   # OpenTelemetry with GRPC
   #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
   #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
@@ -64,8 +64,8 @@ services:
   #   - "3001:3001"
   #   environment:
   #   - EXPOSE_PORT=3001
-  #   - TARGET_ONE_SVC=http://otel-go:8888
-  #   - TARGET_TWO_SVC=http://otel-rust:9999
+  #   - TARGET_ONE_SVC=http://otel-go:7760
+  #   - TARGET_TWO_SVC=http://otel-rust:7770
   #   # OpenTelemetry with GRPC
   #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
   #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
@@ -86,8 +86,8 @@ services:
     - "9999:9999"
     environment:
     - EXPOSE_PORT=9999
-    - TARGET_ONE_SVC=http://otel-go:8888
-    - TARGET_TWO_SVC=http://otel-python:8000
+    - TARGET_ONE_SVC=http://otel-go:7760
+    - TARGET_TWO_SVC=http://otel-python:7740
     # OpenTelemetry with GRPC
     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
     - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
@@ -108,8 +108,8 @@ services:
   #   - "8888:8888"
   #   environment:
   #   - EXPOSE_PORT=8888
-  #   - TARGET_ONE_SVC=http://otel-rust:9999
-  #   - TARGET_TWO_SVC=http://otel-java:8080
+  #   - TARGET_ONE_SVC=http://otel-rust:7770
+  #   - TARGET_TWO_SVC=http://otel-java:7750
   #   # OpenTelemetry with GRPC
   #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
   #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
@@ -130,8 +130,8 @@ services:
   #   - "9191:9191"
   #   environment:
   #   - EXPOSE_PORT=9191
-  #   - TARGET_ONE_SVC=http://otel-rust:9999
-  #   - TARGET_TWO_SVC=http://otel-js:3001
+  #   - TARGET_ONE_SVC=http://otel-rust:7770
+  #   - TARGET_TWO_SVC=http://otel-js:7700
   #   # OpenTelemetry with GRPC
   #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
   #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
@@ -152,8 +152,8 @@ services:
   #   - "3333:3333"
   #   environment:
   #   - EXPOSE_PORT=3333
-  #   - TARGET_ONE_SVC=http://otel-gp:8888
-  #   - TARGET_TWO_SVC=http://otel-rust:9999
+  #   - TARGET_ONE_SVC=http://otel-go:7760
+  #   - TARGET_TWO_SVC=http://otel-rust:7770
   #   # OpenTelemetry with GRPC
   #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
   #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
@@ -173,8 +173,8 @@ services:
   #   - "3434:3434"
   #   environment:
   #   - PORT=3434
-  #   - TARGET_ONE_SVC=http://otel-js:3001
-  #   - TARGET_TWO_SVC=http://otel-java:8080
+  #   - TARGET_ONE_SVC=http://otel-js:7700
+  #   - TARGET_TWO_SVC=http://otel-java:7750
   #   # OpenTelemetry with GRPC
   #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
   #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc

@@ -59,18 +59,9 @@ processors:
     - key: instance
       action: insert
       value: opentelemetry-lab
-  resourcedetection/system:
-    detectors: [system]
-    system:
-      hostname_sources: [dns, os]
-  resourcedetection/env:
-    detectors: ['env']
+  resourcedetection:
+    detectors: [env, system]
     timeout: 2s
-    override: false
-  resourcedetection/docker:
-    detectors: [env, docker]
-    timeout: 2s
-    override: false
 
 exporters:
   otlphttp/logs:
@@ -132,9 +123,7 @@ service:
       - otlp
       - prometheus/collector
       processors:
-      # - resourcedetection/docker
-      - resourcedetection/env
-      - resourcedetection/system
+      - resourcedetection
       - batch
       exporters:
       - otlphttp/metrics

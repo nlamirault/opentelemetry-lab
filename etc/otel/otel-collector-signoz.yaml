@@ -22,15 +22,16 @@ receivers:
         endpoint: 0.0.0.0:4317
       http:
         endpoint: 0.0.0.0:4318
-        cors:
-          allowed_origins:
-            - http://*
+  otlp/spanmetrics:
+    protocols:
+      grpc:
+        endpoint: "localhost:12345"
   prometheus/collector:
     config:
       global:
         scrape_interval: 60s
       scrape_configs:
-      - job_name: 'otel-collector'
+      - job_name: otel-collector
         scrape_interval: 30s
         static_configs:
         - targets:
@@ -44,6 +45,8 @@ extensions:
     path: "/ready"
   pprof:
     endpoint: 0.0.0.0:1777
+  zpages:
+    endpoint: localhost:55679
 
 processors:
   batch:
@@ -62,35 +65,34 @@ processors:
   resourcedetection:
     detectors: [env, system]
     timeout: 2s
+  signozspanmetrics/prometheus:
+    metrics_exporter: prometheus
+    latency_histogram_buckets: [100us, 1ms, 2ms, 6ms, 10ms, 50ms, 100ms, 250ms, 500ms, 1000ms, 1400ms, 2000ms, 5s, 10s, 20s, 40s, 60s ]
+    dimensions_cache_size: 10000
+    dimensions:
+      - name: service.namespace
+        default: default
+      - name: deployment.environment
+        default: default
 
 exporters:
-  otlphttp/logs:
-    endpoint: ${OTEL_EXPORTER_OTLP_LOGS_ENDPOINT}
-    headers:
-      x-greptime-db-name: "opentelemetry_lab_logs"
-      # x-greptime-log-table-name: 'opentelemetry_logs'
-      # x-greptime-pipeline-name: "greptime_logs_v1"
-      # x-greptime-pipeline-version: 'v1.0.0'
-    tls:
-      insecure: true
-  otlphttp/metrics:
-    endpoint: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT}
-    headers:
-      x-greptime-db-name: "opentelemetry_lab_metrics"
-    tls:
-      insecure: true
-  # otlp/profiles:
-  #   endpoint: ${OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT}
-  #   tls:
-  #     insecure: true
-  otlphttp/traces:
-    endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT}
-    headers:
-      x-greptime-db-name: "opentelemetry_lab_traces"
-      x-greptime-pipeline-name: 'greptime_trace_v1'
-      # x-greptime-pipeline-version: 'v1.0.0'
-    tls:
-      insecure: true
+  clickhousetraces:
+    datasource: ${env:CLICKHOUSE_ENDPOINT}/${env:CLICKHOUSE_TRACE_DATABASE}
+    low_cardinal_exception_grouping: ${env:LOW_CARDINAL_EXCEPTION_GROUPING}
+    use_new_schema: true
+  signozclickhousemetrics:
+    dsn: ${env:CLICKHOUSE_ENDPOINT}/${env:CLICKHOUSE_METRIC_DATABASE}
+    timeout: 45s
+  clickhouselogsexporter:
+    dsn: ${env:CLICKHOUSE_ENDPOINT}/${env:CLICKHOUSE_LOG_DATABASE}
+    timeout: 10s
+    use_new_schema: true
+  metadataexporter:
+    dsn: ${env:CLICKHOUSE_ENDPOINT}/${env:CLICKHOUSE_META_DATABASE}
+    timeout: 10s
+    # tenant_id: ${env:TENANT_ID}
+    cache:
+      provider: in_memory
 
   prometheus:
     endpoint: "0.0.0.0:8889"
@@ -118,6 +120,7 @@ service:
   extensions:
     - health_check
     - pprof
+    - zpages
   pipelines:
     logs:
       receivers:
@@ -127,8 +130,9 @@ service:
       - batch
       - attributes
       exporters:
-      - otlphttp/logs
-      - debug/logs
+      # - debug/logs
+      - clickhouselogsexporter
+      - metadataexporter
     metrics:
       receivers:
       - otlp
@@ -137,21 +141,21 @@ service:
       - resourcedetection
       - batch
       exporters:
-      - otlphttp/metrics
-      - debug/metrics
-    # profiles:
-    #   receivers:
-    #   - otlp
-    #   exporters:
-    #   - otlp/profiles
+      # - debug/metrics
+      - signozclickhousemetrics
+      - metadataexporter
+    metrics/spanmetrics:
+      receivers:
+      - otlp/spanmetrics
+      exporters:
+      - prometheus
     traces:
       receivers:
       - otlp
       processors:
+      - signozspanmetrics/prometheus
       - batch
       exporters:
-      - otlphttp/traces
-      - debug/traces
-    # metrics/spanmetrics:
-    #   receivers: [spanmetrics]
-    #   exporters: [prometheus]
+      # - debug/traces
+      - clickhousetraces
+      - metadataexporter
