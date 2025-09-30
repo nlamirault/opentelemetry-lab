@@ -13,10 +13,10 @@ use tracing::info;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::EnvFilter;
 
-mod handlers;
+mod routes;
 mod otel;
 
-use handlers::{handler_chain, handler_health, handler_root, handler_version};
+use routes::{handler_chain, handler_health, handler_root, handler_version};
 use otel::{create_resource, init_logger, init_meter, init_tracer};
 
 fn setup_opentelemetry() -> anyhow::Result<()> {
@@ -51,7 +51,20 @@ fn setup_opentelemetry() -> anyhow::Result<()> {
 
     global::set_text_map_propagator(TraceContextPropagator::new());
     global::set_tracer_provider(tracer_provider);
-    global::set_meter_provider(meter_provider);
+    global::set_meter_provider(meter_provider.clone());
+
+    // Create build info metric
+    // let meter = meter_provider.meter("otel-rust");
+    // let build_info = meter.u64_counter("opentelemetry_lab_build_info").init();
+    // let service_name = env::var("OTEL_SERVICE_NAME").unwrap_or("otel-rust".to_string());
+    // build_info.add(
+    //     1,
+    //     &[
+    //         opentelemetry::KeyValue::new("language", "rust"),
+    //         opentelemetry::KeyValue::new("version", "v1.0.0"),
+    //         opentelemetry::KeyValue::new("service", service_name),
+    //     ],
+    // );
 
     Ok(())
 }
