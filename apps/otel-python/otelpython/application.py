@@ -9,6 +9,7 @@ from fastapi import responses
 from opentelemetry import trace
 from opentelemetry.instrumentation import fastapi as otel_fastapi
 from opentelemetry.instrumentation import httpx as otel_httpx
+from opentelemetry.instrumentation import system_metrics as otel_system_metrics
 import prometheus_client
 
 from otelpython import version as app_version
@@ -64,4 +65,5 @@ def _setup_auto_instrumentation(app: fastapi.FastAPI) -> None:
 
     otel_fastapi.FastAPIInstrumentor.instrument_app(app)
     otel_httpx.HTTPXClientInstrumentor().instrument()
+    otel_system_metrics.SystemMetricsInstrumentor().instrument()
     # AsyncPGInstrumentor().instrument()
