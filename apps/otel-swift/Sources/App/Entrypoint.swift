@@ -4,12 +4,11 @@
 import Logging
 import NIOCore
 import NIOPosix
+import OpenTelemetryApi
+import OpenTelemetrySdk
+import ResourceExtension
+import StdoutExporter
 import Vapor
-
-// import OpenTelemetryApi
-// import OpenTelemetrySdk
-// import StdoutExporter
-// import ResourceExtension
 
 @main
 enum Entrypoint {
@@ -23,15 +22,16 @@ enum Entrypoint {
     try? OpenTelemetryMeter.instance.initialize(endpoint: endpoint)
 
     // Create build info metric
-    // let serviceName = Environment.get("OTEL_SERVICE_NAME") ?? "otel-swift"
-    // if let meter = OpenTelemetryMeter.instance.meter {
-    //     let buildInfo = meter.createIntCounter(name: "opentelemetry_lab_build_info")
-    //     buildInfo.add(value: 1, labels: [
-    //         "language": "swift",
-    //         "version": "v1.0.0",
-    //         "service": serviceName
-    //     ])
-    // }
+    let serviceName = Environment.get("OTEL_SERVICE_NAME") ?? "otel-swift"
+    let meter = OpenTelemetryMeter.instance.getMeter()
+    var buildInfo = meter.counterBuilder(name: "opentelemetry_lab_build_info").build()
+    buildInfo.add(
+      value: 1,
+      attributes: [
+        SemanticConventions.Telemetry.sdkLanguage.rawValue: AttributeValue.string("swift"),
+        SemanticConventions.Service.name.rawValue: AttributeValue.string(serviceName),
+        SemanticConventions.Service.version.rawValue: AttributeValue.string("v1.0.0"),
+      ])
 
     let app: Application = try await Application.make(env)
 
