@@ -30,12 +30,12 @@ async def chain_handler() -> dict[str, str]:
     metrics.request_counter.add(1, {"target_service": "chain"})
 
     with tracer.start_as_current_span(
-        "chain_request",
+        "process request",
         kind=trace.SpanKind.SERVER,
     ):
         with httpx.Client() as client:
             with tracer.start_as_current_span(
-                "call_service", kind=trace.SpanKind.CLIENT
+                "call service", kind=trace.SpanKind.CLIENT
             ) as span_svc:
                 # async with httpx.AsyncClient() as client:
                 logger.info("Call localhost")

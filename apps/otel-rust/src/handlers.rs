@@ -14,8 +14,8 @@ pub async fn handler_root() -> &'static str {
     // &'static str {
     info!(target: "otel_rust::handlers", "Root handler");
     let tracer = global::tracer("otel-rust");
-    let mut span = tracer.start("root_handler");
-    span.set_attribute(KeyValue::new("path", "/".to_string()));
+    let mut span = tracer.start("handle request");
+    span.set_attribute(KeyValue::new("http.route", "/".to_string()));
     span.end();
     "OpenTelemetry Lab / Rust"
 }
