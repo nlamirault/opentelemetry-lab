@@ -1,0 +1,8 @@
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+const METRIC_BUILD_INFO = "opentelemetry.lab.build.info";
+
+module.exports = {
+  METRIC_BUILD_INFO,
+};

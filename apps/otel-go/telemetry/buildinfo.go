@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	METRIC_BUILD_INFO = "opentelemetry_lab_build_info"
+	METRIC_BUILD_INFO = "opentelemetry.lab.build.info"
 )
 
-// InitBuildInfo creates and records the opentelemetry_lab_build_info metric
+// InitBuildInfo creates and records the opentelemetry.lab.build.info metric
 // with standard semantic conventions for language, service, and version.
 func InitBuildInfo(ctx context.Context, meterProvider *sdkmetric.MeterProvider, serviceName string) error {
 	meter := meterProvider.Meter("otel-go")

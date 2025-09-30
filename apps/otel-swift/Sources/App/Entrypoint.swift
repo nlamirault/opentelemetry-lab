@@ -24,7 +24,7 @@ enum Entrypoint {
     // Create build info metric
     let serviceName = Environment.get("OTEL_SERVICE_NAME") ?? "otel-swift"
     let meter = OpenTelemetryMeter.instance.getMeter()
-    var buildInfo = meter.counterBuilder(name: "opentelemetry_lab_build_info").build()
+    var buildInfo = meter.counterBuilder(name: Constants.metricBuildInfo).build()
     buildInfo.add(
       value: 1,
       attributes: [

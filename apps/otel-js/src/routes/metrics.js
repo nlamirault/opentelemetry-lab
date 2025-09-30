@@ -9,6 +9,7 @@ const {
   ATTR_SERVICE_VERSION,
   ATTR_TELEMETRY_SDK_LANGUAGE,
 } = require("@opentelemetry/semantic-conventions");
+const { METRIC_BUILD_INFO } = require("../constants");
 
 const logger = pino();
 const router = express.Router();
@@ -35,7 +36,7 @@ const serviceName = process.env.OTEL_SERVICE_NAME || "otel-js";
 
 // Create build info metric for Prometheus
 const buildInfoMetric = new client.Gauge({
-  name: "opentelemetry_lab_build_info",
+  name: METRIC_BUILD_INFO.replace(/\./g, "_"), // Convert dots to underscores for Prometheus compatibility
   help: "Build information for the OpenTelemetry lab application",
   labelNames: [PROM_SERVICE_LABEL, PROM_VERSION_LABEL, PROM_SDK_LABEL],
   registers: [register],

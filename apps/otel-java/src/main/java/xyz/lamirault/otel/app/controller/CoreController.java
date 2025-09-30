@@ -10,6 +10,7 @@ import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.metrics.ObservableDoubleGauge;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.semconv.ResourceAttributes;
 import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
 import java.io.IOException;
 import java.io.IOException;
@@ -98,12 +99,15 @@ public class CoreController {
       int statusCode = response.getCode();
       String body = EntityUtils.toString(response.getEntity());
 
-      span.setAttribute(SemanticAttributes.HTTP_METHOD, "GET");
+      span.setAttribute(ResourceAttributes.HTTP_METHOD, "GET");
+      // span.setAttribute(SemanticAttributes.HTTP_METHOD, "GET");
       span.setAttribute(
-        SemanticAttributes.HTTP_URL,
+        // SemanticAttributes.HTTP_URL,
+        ResourceAttributes.HTTP_URL,
         "https://api.ipify.org?format=json"
       );
-      span.setAttribute(SemanticAttributes.HTTP_STATUS_CODE, statusCode);
+      // span.setAttribute(SemanticAttributes.HTTP_STATUS_CODE, statusCode);
+      span.setAttribute(ResourceAttributes.HTTP_STATUS_CODE, statusCode);
 
       logger.info("Response content" + body);
     } catch (ClientProtocolException e) {
