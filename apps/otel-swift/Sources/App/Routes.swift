@@ -1,41 +1,10 @@
 // SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 // SPDX-License-Identifier: Apache-2.0
 
-import OpenTelemetryApi
-import OpenTelemetrySdk
-import ResourceExtension
 import Vapor
 
-struct VersionResponse: Content {
-  var version: String
-}
-
 func routes(_ app: Application) throws {
-
-  let logger: OpenTelemetryApi.Logger = OpenTelemetryLogger.instance.getLogger()
-
-  app.get { req async in
-    req.logger.info("Root handler")
-    // let logger: OpenTelemetryApi.Logger = OpenTelemetryLogger.instance.getLogger()
-    logger.log("[handller] Root", severity: .info)
-    let tracer: OpenTelemetryApi.Tracer = OpenTelemetryTracer.instance.getTracer()
-    let span: any Span = tracer.spanBuilder(spanName: "root").startSpan()
-    span.setAttribute(key: "path", value: "root")
-    span.end()
-    return "OpenTelemetry Lab / Swift"
-  }
-
-  app.get("health") { req async -> String in
-    req.logger.info("[handler] Health")
-    // let logger: OpenTelemetryApi.Logger = OpenTelemetryLogger.instance.getLogger()
-    logger.log("Handler: health", severity: .info)
-    return "Ok"
-  }
-
-  app.get("version") { req async -> VersionResponse in
-    req.logger.info("[handler] Version")
-    // let logger: OpenTelemetryApi.Logger = OpenTelemetryLogger.instance.getLogger()
-    logger.log("Handler: version", severity: .info)
-    return VersionResponse(version: "v1.0.0")
-  }
+    try RootRoutes.configure(app)
+    try HealthRoutes.configure(app)
+    try VersionRoutes.configure(app)
 }
