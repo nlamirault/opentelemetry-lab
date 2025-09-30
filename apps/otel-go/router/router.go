@@ -8,7 +8,6 @@ import (
 
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.uber.org/zap"
 
@@ -20,6 +19,7 @@ type Router struct {
 	healthHandler  *handlers.HealthHandler
 	appHandler     *handlers.AppHandler
 	serviceHandler *handlers.ServiceHandler
+	metricsHandler *handlers.MetricsHandler
 }
 
 func New(serviceName string) *Router {
@@ -33,17 +33,18 @@ func New(serviceName string) *Router {
 		healthHandler:  handlers.NewHealthHandler(),
 		appHandler:     handlers.NewAppHandler(),
 		serviceHandler: handlers.NewServiceHandler(),
+		metricsHandler: handlers.NewMetricsHandler(),
 	}
 }
 
 func (r *Router) SetupRoutes() {
 	r.engine.Use(ginzap.Ginzap(zap.L(), time.RFC3339, true))
 	r.engine.Use(ginzap.RecoveryWithZap(zap.L(), true))
-	r.engine.GET("/health", r.healthHandler.Health)
 	r.engine.GET("/", r.appHandler.Root)
-	r.engine.GET("/version", r.appHandler.Version)
 	r.engine.GET("/chain", r.serviceHandler.Chain)
-	r.engine.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	r.engine.GET("/health", r.healthHandler.Health)
+	r.engine.GET("/metrics", r.metricsHandler.Metrics)
+	r.engine.GET("/version", r.appHandler.Version)
 }
 
 func (r *Router) Engine() *gin.Engine {

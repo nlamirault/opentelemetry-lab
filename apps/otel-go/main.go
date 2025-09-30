@@ -13,8 +13,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/host"
 	otelruntime "go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.uber.org/zap"
 
 	"github.com/nlamirault/otel-go/router"
@@ -114,17 +112,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Create build info metric
-	meter := mp.Meter("otel-go")
-	buildInfo, err := meter.Int64Counter("opentelemetry_lab_build_info")
-	if err != nil {
+	// Initialize build info metric
+	if err = telemetry.InitBuildInfo(ctx, mp, serviceName); err != nil {
 		log.Fatal(err)
 	}
-	buildInfo.Add(ctx, 1, metric.WithAttributes(
-		semconv.TelemetrySDKLanguageGo,
-		semconv.ServiceName(serviceName),
-		semconv.ServiceVersion("v1.0.0"),
-	))
 
 	r := router.New(serviceName)
 	r.SetupRoutes()
