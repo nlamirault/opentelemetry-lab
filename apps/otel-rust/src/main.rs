@@ -6,7 +6,6 @@ use std::env;
 
 use axum::{routing, Router};
 use opentelemetry::global;
-use opentelemetry::metrics::MeterProvider;
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
 use tokio::net;
@@ -19,8 +18,7 @@ mod otel;
 mod constants;
 
 use routes::{handler_chain, handler_health, handler_root, handler_version};
-use otel::{create_resource, init_logger, init_meter, init_tracer};
-use constants::METRIC_BUILD_INFO;
+use otel::{create_resource, init_logger, init_meter, init_tracer, init_build_info};
 
 fn setup_opentelemetry() -> anyhow::Result<()> {
     let default_endpoint = "http://localhost:4317".to_string();
@@ -56,21 +54,8 @@ fn setup_opentelemetry() -> anyhow::Result<()> {
     global::set_tracer_provider(tracer_provider);
     global::set_meter_provider(meter_provider.clone());
 
-    // Create build info metric
-    let meter = meter_provider.meter("otel-rust");
-    let build_info = meter
-        .u64_counter(METRIC_BUILD_INFO)
-        .with_description("Build information for the OpenTelemetry lab application")
-        .build();
-    let service_name = env::var("OTEL_SERVICE_NAME").unwrap_or("otel-rust".to_string());
-    build_info.add(
-        1,
-        &[
-            opentelemetry::KeyValue::new("language", "rust"),
-            opentelemetry::KeyValue::new("version", "v1.0.0"),
-            opentelemetry::KeyValue::new("service", service_name),
-        ],
-    );
+    // Initialize build info metric
+    init_build_info(&meter_provider);
 
     Ok(())
 }
