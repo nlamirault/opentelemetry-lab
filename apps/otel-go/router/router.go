@@ -8,6 +8,7 @@ import (
 
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.uber.org/zap"
 
@@ -42,6 +43,7 @@ func (r *Router) SetupRoutes() {
 	r.engine.GET("/", r.appHandler.Root)
 	r.engine.GET("/version", r.appHandler.Version)
 	r.engine.GET("/chain", r.serviceHandler.Chain)
+	r.engine.GET("/metrics", gin.WrapH(promhttp.Handler()))
 }
 
 func (r *Router) Engine() *gin.Engine {

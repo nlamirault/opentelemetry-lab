@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
+	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -39,6 +40,12 @@ func InitMeter(ctx context.Context, resource *resource.Resource, otlpEndpoint st
 		return nil, fmt.Errorf("unsupported protocol: %s", protocol)
 	}
 
+	// Create Prometheus exporter
+	promExporter, err := prometheus.New()
+	if err != nil {
+		return nil, err
+	}
+
 	var provider *sdkmetric.MeterProvider
 	if os.Getenv(ENV_OTEL_DEBUG) != "" {
 		enc := json.NewEncoder(os.Stdout)
@@ -55,11 +62,13 @@ func InitMeter(ctx context.Context, resource *resource.Resource, otlpEndpoint st
 			sdkmetric.WithResource(resource),
 			sdkmetric.WithReader(sdkmetric.NewPeriodicReader(otlpExporter)),
 			sdkmetric.WithReader(sdkmetric.NewPeriodicReader(stdoutExporter)),
+			sdkmetric.WithReader(promExporter),
 		)
 	} else {
 		provider = sdkmetric.NewMeterProvider(
 			sdkmetric.WithResource(resource),
 			sdkmetric.WithReader(sdkmetric.NewPeriodicReader(otlpExporter)),
+			sdkmetric.WithReader(promExporter),
 		)
 	}
 
