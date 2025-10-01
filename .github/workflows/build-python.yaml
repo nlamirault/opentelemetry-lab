@@ -1,10 +1,10 @@
 ---
-name: Build / Go
+name: Build / Python
 
 on:
   pull_request:
     paths:
-      - apps/otel-go/**
+      - apps/otel-python/**
   workflow_dispatch:  # Allow manual triggering
 
 permissions:
@@ -13,11 +13,12 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
-        go-version: [ '1.14', '1.13' ]
+        python-version: ["3.13", "3.14"]
 
-    name: Build Go application (Go ${{ matrix.go-version }})
+    name: Build Python application (Python ${{ matrix.python }})
 
     steps:
       - name: 🚚 Checkout
@@ -30,24 +31,18 @@ jobs:
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
-      - name: 🎉 Setup go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+      - name: 🎉 Install Uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
         with:
-          go-version: ${{ matrix.go-version }}
-          # go-version-file: 'go.mod'
-
-      - name: 📦️ Download dependencies
-        run: go mod download
+          python-version: ${{ matrix.python-version }}
+          working-directory: apps/otel-python
 
       - name: ✅ Build application
-        run: |
-          cd apps/otel-go
-          go build .
+        run: uv build
 
       - name: ✅ Lint
-        uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8.0.0
-        with:
-          args: --verbose
+        run: uv run ruff check
+
 
   docker:
     runs-on: ubuntu-latest
@@ -79,7 +74,7 @@ jobs:
       - name: 🐳 Build and push Docker image
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
-          context: apps/otel-go
+          context: apps/otel-python
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: false
