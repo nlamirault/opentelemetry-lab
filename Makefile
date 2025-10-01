@@ -44,7 +44,7 @@ check-%:
 		echo -e "$(ERROR_COLOR)$(KO)$(NO_COLOR) $*"; \
 	fi
 
-##@ Development
+##@ Docker
 
 .PHONY: build
 build: guard-APP ## Build Docker image
@@ -55,6 +55,8 @@ build: guard-APP ## Build Docker image
 run: guard-APP ## Launch Docker image
 	@echo -e "$(INFO)$(INFO_COLOR)[Docker] Running image for $(APP)$(NO_COLOR)"
 	@docker run --rm opentelemetry-lab/otel-$(APP):latest
+
+##@ Usage
 
 .PHONY: start-observability
 start-observability: guard-CHOICE ## Start the observability stack
