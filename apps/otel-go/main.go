@@ -12,14 +12,11 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/host"
 	otelruntime "go.opentelemetry.io/contrib/instrumentation/runtime"
-	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
 
 	"github.com/nlamirault/otel-go/router"
 	"github.com/nlamirault/otel-go/telemetry"
 )
-
-var tracer = otel.Tracer("otel-go")
 
 func main() {
 	ctx := context.Background()
@@ -125,5 +122,7 @@ func main() {
 		port = "8888"
 	}
 	zap.L().Info("Starting server")
-	r.Engine().Run(fmt.Sprintf(":%s", port))
+	if err := r.Engine().Run(fmt.Sprintf(":%s", port)); err != nil {
+		zap.L().Fatal("Failed to start server", zap.Error(err))
+	}
 }
