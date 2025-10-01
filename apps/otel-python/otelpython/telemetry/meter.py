@@ -4,17 +4,15 @@
 import logging
 import os
 
+from opentelemetry import metrics
+from opentelemetry.exporter import prometheus
 from opentelemetry.exporter.otlp.proto.grpc import metric_exporter as metric_exporter_grpc
 from opentelemetry.exporter.otlp.proto.grpc import metric_exporter as metric_exporter_http
-from opentelemetry.exporter import prometheus
 from opentelemetry.sdk import metrics as sdk_metrics
 from opentelemetry.sdk import resources
 from opentelemetry.sdk.metrics import export
-from opentelemetry import metrics
 
-from otelpython import exceptions
-from otelpython import settings
-
+from otelpython import exceptions, settings
 
 logger = logging.getLogger(__name__)
 
@@ -30,13 +28,9 @@ def setup(resource: resources.Resource, otlp_endpoint: str, otlp_protocol: str) 
             endpoint=f"{otlp_endpoint}/v1/metrics", insecure=True
         )
     elif otlp_protocol == "grpc":
-        otlp_metric_exporter = metric_exporter_grpc.OTLPMetricExporter(
-            endpoint=otlp_endpoint, insecure=True
-        )
+        otlp_metric_exporter = metric_exporter_grpc.OTLPMetricExporter(endpoint=otlp_endpoint, insecure=True)
     else:
-        raise exceptions.OpenTelemetryProtocolException(
-            f"invalid OpenTelemetry protocol: {otlp_protocol}"
-        )
+        raise exceptions.OpenTelemetryProtocolException(f"invalid OpenTelemetry protocol: {otlp_protocol}")
     logger.info("OTLP metrics configured")
 
     metrics_readers = []

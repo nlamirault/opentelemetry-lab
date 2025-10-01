@@ -15,22 +15,17 @@ from pythonjsonlogger import jsonlogger
 
 from otelpython import exceptions
 
-
 # logger = logging.getLogger(__name__)
 
 
 def setup(resource: resources.Resource, otlp_endpoint: str, otlp_protocol: str) -> None:
     otlp_log_exporter = None
     if otlp_protocol == "http":
-        otlp_log_exporter = log_exporter_http.OTLPLogExporter(
-            endpoint=f"{otlp_endpoint}/v1/logs", insecure=True
-        )
+        otlp_log_exporter = log_exporter_http.OTLPLogExporter(endpoint=f"{otlp_endpoint}/v1/logs", insecure=True)
     elif otlp_protocol == "grpc":
         otlp_log_exporter = log_exporter_grpc.OTLPLogExporter(endpoint=otlp_endpoint, insecure=True)
     else:
-        raise exceptions.OpenTelemetryProtocolException(
-            f"invalid OpenTelemetry protocol: {otlp_protocol}"
-        )
+        raise exceptions.OpenTelemetryProtocolException(f"invalid OpenTelemetry protocol: {otlp_protocol}")
 
     logger_provider = sdk_logs.LoggerProvider(
         resource=resource,
@@ -40,9 +35,7 @@ def setup(resource: resources.Resource, otlp_endpoint: str, otlp_protocol: str) 
 
     if os.getenv("OTEL_ENABLE_CONSOLE", "false").lower() == "true":
         console_log_exporter = export.ConsoleLogExporter()
-        logger_provider.add_log_record_processor(
-            export.SimpleLogRecordProcessor(console_log_exporter)
-        )
+        logger_provider.add_log_record_processor(export.SimpleLogRecordProcessor(console_log_exporter))
         # logger_provider.add_log_record_processor(export.BatchLogRecordProcessor(console_log_exporter))
 
     _logs.set_logger_provider(logger_provider)

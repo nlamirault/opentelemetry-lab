@@ -13,19 +13,20 @@ use tracing::info;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::EnvFilter;
 
-mod routes;
-mod otel;
 mod constants;
+mod otel;
+mod routes;
 
+use otel::{create_resource, init_build_info, init_logger, init_meter, init_tracer};
 use routes::{handler_chain, handler_health, handler_root, handler_version};
-use otel::{create_resource, init_logger, init_meter, init_tracer, init_build_info};
 
 fn setup_opentelemetry() -> anyhow::Result<()> {
     let default_endpoint = "http://localhost:4317".to_string();
     let endpoint = env::var("OTEL_EXPORTER_OTLP_ENDPOINT").unwrap_or(default_endpoint);
     let protocol = env::var("OTEL_EXPORTER_OTLP_PROTOCOL").unwrap_or("http".to_string());
+    let service_name = env::var("OTEL_SERVICE_NAME").unwrap_or_else(|_| "otel-rust".to_string());
 
-    let resource = create_resource();
+    let resource = create_resource(service_name.clone());
     let logger_provider = init_logger(resource.clone(), endpoint.clone(), protocol.clone());
     let meter_provider = init_meter(resource.clone(), endpoint.clone(), protocol.clone());
     let tracer_provider = init_tracer(resource.clone(), endpoint.clone(), protocol.clone());
@@ -55,7 +56,7 @@ fn setup_opentelemetry() -> anyhow::Result<()> {
     global::set_meter_provider(meter_provider.clone());
 
     // Initialize build info metric
-    init_build_info(&meter_provider);
+    init_build_info(&meter_provider, service_name);
 
     Ok(())
 }

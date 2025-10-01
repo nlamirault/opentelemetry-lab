@@ -5,11 +5,9 @@ import logging
 
 from opentelemetry.sdk import resources
 
-from otelpython.telemetry import otel
-from otelpython import settings
-from otelpython import version
+from otelpython import settings, version
 from otelpython.constants import METRIC_BUILD_INFO
-
+from otelpython.telemetry import otel
 
 logger = logging.getLogger(__name__)
 meter = otel.get_meter()

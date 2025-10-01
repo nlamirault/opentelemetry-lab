@@ -2,8 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 FROM node:20.11.0-alpine3.19 as build
+
 WORKDIR /app
+
 COPY . .
-RUN npm ci
+
+RUN yarn install
 
 CMD node app.js

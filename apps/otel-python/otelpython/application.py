@@ -4,20 +4,15 @@
 import logging
 
 import fastapi
-from fastapi import exceptions
-from fastapi import responses
+import prometheus_client
+from fastapi import exceptions, responses
 from opentelemetry import trace
 from opentelemetry.instrumentation import fastapi as otel_fastapi
 from opentelemetry.instrumentation import httpx as otel_httpx
 from opentelemetry.instrumentation import system_metrics as otel_system_metrics
-import prometheus_client
 
 from otelpython import version as app_version
-from otelpython.api import chain
-from otelpython.api import health
-from otelpython.api import metrics
-from otelpython.api import root
-from otelpython.api import version
+from otelpython.api import chain, health, root, version
 
 
 def creates_app(service_name: str) -> fastapi.FastAPI:
@@ -57,9 +52,7 @@ def add_otel_exception_handler(app: fastapi.FastAPI) -> None:
         )
         # current_span.add_event("Test")
         current_span.record_exception(exc)
-        return responses.JSONResponse(
-            status_code=exc.status_code, content={"detail": str(exc.detail)}
-        )
+        return responses.JSONResponse(status_code=exc.status_code, content={"detail": str(exc.detail)})
 
 
 def _setup_auto_instrumentation(app: fastapi.FastAPI) -> None:

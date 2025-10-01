@@ -18,7 +18,7 @@ const (
 // InitBuildInfo creates and records the opentelemetry.lab.build.info metric
 // with standard semantic conventions for language, service, and version.
 func InitBuildInfo(ctx context.Context, meterProvider *sdkmetric.MeterProvider, serviceName string) error {
-	meter := meterProvider.Meter("otel-go")
+	meter := meterProvider.Meter(serviceName)
 	buildInfo, err := meter.Int64Counter(METRIC_BUILD_INFO)
 	if err != nil {
 		return err

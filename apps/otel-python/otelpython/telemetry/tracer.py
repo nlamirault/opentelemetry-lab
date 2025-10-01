@@ -5,15 +5,13 @@ import logging
 import os
 
 from opentelemetry import trace
-from opentelemetry.sdk import trace as sdk_trace
-from opentelemetry.sdk import resources
-from opentelemetry.sdk.trace import export as trace_export
-from opentelemetry.exporter.otlp.proto.http import trace_exporter as trace_exporter_http
 from opentelemetry.exporter.otlp.proto.grpc import trace_exporter as trace_exporter_grpc
+from opentelemetry.exporter.otlp.proto.http import trace_exporter as trace_exporter_http
+from opentelemetry.sdk import resources
+from opentelemetry.sdk import trace as sdk_trace
+from opentelemetry.sdk.trace import export as trace_export
 
-from otelpython import exceptions
-from otelpython import settings
-
+from otelpython import exceptions, settings
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +21,7 @@ def setup(resource: resources.Resource, otlp_endpoint: str, otlp_protocol: str) 
 
     otlp_span_exporter = None
     if otlp_protocol == "http":
-        otlp_span_exporter = trace_exporter_http.OTLPSpanExporter(
-            endpoint=f"{otlp_endpoint}/v1/traces", insecure=True
-        )
+        otlp_span_exporter = trace_exporter_http.OTLPSpanExporter(endpoint=f"{otlp_endpoint}/v1/traces", insecure=True)
         print("http ok")
     elif otlp_protocol == "grpc":
         otlp_span_exporter = trace_exporter_grpc.OTLPSpanExporter(
@@ -33,9 +29,7 @@ def setup(resource: resources.Resource, otlp_endpoint: str, otlp_protocol: str) 
             insecure=True,
         )
     else:
-        raise exceptions.OpenTelemetryProtocolException(
-            f"invalid OpenTelemetry protocol: {otlp_protocol}"
-        )
+        raise exceptions.OpenTelemetryProtocolException(f"invalid OpenTelemetry protocol: {otlp_protocol}")
     logger.info(f"OTLP tracing configured: {otlp_endpoint}")
 
     tracer_provider = sdk_trace.TracerProvider(

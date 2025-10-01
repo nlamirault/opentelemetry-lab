@@ -36,7 +36,11 @@ func (h *HTTPClient) Call(ctx *gin.Context, url string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			zap.L().Error("Failed to close response body", zap.Error(err))
+		}
+	}()
 
 	zap.L().Info("Response", zap.String("status", resp.Status))
 	

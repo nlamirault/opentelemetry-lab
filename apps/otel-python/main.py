@@ -1,19 +1,15 @@
 # SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 # SPDX-License-Identifier: Apache-2.0
 
-import json
 import logging
-
 
 import uvicorn
 
-from otelpython import application
+from otelpython import application, settings
 from otelpython.telemetry import logger as otel_logger
 from otelpython.telemetry import meter as otel_meter
 from otelpython.telemetry import otel
 from otelpython.telemetry import tracer as otel_tracer
-from otelpython import settings
-
 
 logger = logging.getLogger(__name__)
 tracer = otel.get_tracer()
