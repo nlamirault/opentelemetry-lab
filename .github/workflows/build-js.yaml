@@ -16,9 +16,9 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [ 14, 16, 18 ]
+        node-version: [ 24, 25, 26 ]
 
-    name: 🚚 Build Js application (Node ${{ matrix.node-version }})
+    name: 🚚 Build with Node ${{ matrix.node-version }}
 
     steps:
       - name: Checkout

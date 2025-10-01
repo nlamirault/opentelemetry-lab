@@ -37,7 +37,9 @@ jobs:
           # go-version-file: 'go.mod'
 
       - name: 📦️ Download dependencies
-        run: go mod download
+        run: |
+          cd apps/otel-go
+          go mod download
 
       - name: ✅ Build application
         run: |
