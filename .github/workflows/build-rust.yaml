@@ -37,7 +37,7 @@ jobs:
 
       - name: ✅ Build application
         run: |
-          cd apps/otelrust
+          cd apps/otel-rust
           cargo build
 
   docker:
