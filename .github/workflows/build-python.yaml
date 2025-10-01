@@ -38,10 +38,14 @@ jobs:
           working-directory: apps/otel-python
 
       - name: ✅ Build application
-        run: uv build
+        run: |
+          cd apps/otel-python
+          uv build
 
       - name: ✅ Lint
-        run: uv run ruff check
+        run: |
+          cd apps/otel-python
+          uv run ruff check
 
 
   docker:
