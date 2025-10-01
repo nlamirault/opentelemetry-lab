@@ -6,17 +6,12 @@ use std::env;
 use opentelemetry::KeyValue;
 use opentelemetry_resource_detectors::{OsResourceDetector, ProcessResourceDetector};
 use opentelemetry_sdk::{
-    resource::EnvResourceDetector,
-    resource::ResourceDetector,
-    resource::SdkProvidedResourceDetector,
-    resource::TelemetryResourceDetector,
-    Resource,
+    resource::EnvResourceDetector, resource::ResourceDetector,
+    resource::SdkProvidedResourceDetector, resource::TelemetryResourceDetector, Resource,
 };
 use opentelemetry_semantic_conventions::resource;
 
-pub fn create_resource() -> Resource {
-    let service_name =
-        env::var("OTEL_SERVICE_NAME").unwrap_or_else(|_| "default-otel-rust".to_string());
+pub fn create_resource(service_name: String) -> Resource {
     let detectors: Vec<Box<dyn ResourceDetector>> = vec![
         Box::new(EnvResourceDetector::new()),
         Box::new(OsResourceDetector),
