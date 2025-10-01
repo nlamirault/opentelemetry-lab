@@ -18,7 +18,7 @@ jobs:
       matrix:
         node-version: [ 22, 24 ]
 
-    name: Build with Node ${{ matrix.node-version }}
+    name: Node ${{ matrix.node-version }}
 
     steps:
       - name: 🚚 Checkout

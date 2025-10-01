@@ -18,7 +18,7 @@ jobs:
       matrix:
         python-version: ["3.12", "3.13"]
 
-    name: Build with Python ${{ matrix.python-version }}
+    name: Python ${{ matrix.python-version }}
 
     steps:
       - name: 🚚 Checkout

@@ -18,7 +18,7 @@ jobs:
       matrix:
         bun-version: [ 1.1, 1.2 ]
 
-    name: Build Ts application (Bun ${{ matrix.bun-version }})
+    name: Bun ${{ matrix.bun-version }}
 
     steps:
       - name: 🚚 Checkout
@@ -71,8 +71,8 @@ jobs:
       - name: 🐳 Build and push Docker image
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
-          context: apps/otel-js
-          file: ./Dockerfile
+          context: ./apps/otel-ts
+          file: ./apps/otel-ts/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: false
           # provenance: mode=max

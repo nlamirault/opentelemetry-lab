@@ -17,7 +17,7 @@ jobs:
       matrix:
         java-version: [ '8', '11', '17', '21' ]
 
-    name: Build Java application (Java ${{ matrix.java-version }})
+    name: Java ${{ matrix.java-version }}
 
     steps:
       - name: 🚚 Checkout
