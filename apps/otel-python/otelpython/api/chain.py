@@ -9,10 +9,8 @@ import httpx
 from opentelemetry import trace
 from opentelemetry.semconv.trace import SpanAttributes
 
-from otelpython.telemetry import metrics
-from otelpython.telemetry import otel
-from otelpython.telemetry import traces
 from otelpython import settings
+from otelpython.telemetry import metrics, otel, traces
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +21,7 @@ tracer = otel.get_tracer()
 
 @router.get("/chain", tags=["chain"])
 async def chain_handler() -> dict[str, str]:
-    logger.info(
-        f"[handler] Chain Start using {settings.TARGET_ONE_SVC} and {settings.TARGET_TWO_SVC}"
-    )
+    logger.info(f"[handler] Chain Start using {settings.TARGET_ONE_SVC} and {settings.TARGET_TWO_SVC}")
 
     metrics.request_counter.add(1, {"target_service": "chain"})
 
@@ -34,9 +30,7 @@ async def chain_handler() -> dict[str, str]:
         kind=trace.SpanKind.SERVER,
     ):
         with httpx.Client() as client:
-            with tracer.start_as_current_span(
-                "call service", kind=trace.SpanKind.CLIENT
-            ) as span_svc:
+            with tracer.start_as_current_span("call service", kind=trace.SpanKind.CLIENT) as span_svc:
                 # async with httpx.AsyncClient() as client:
                 logger.info("Call localhost")
                 span_svc.set_attribute(SpanAttributes.HTTP_URL, "https://api.ipify.org?format=json")
@@ -48,9 +42,7 @@ async def chain_handler() -> dict[str, str]:
                     logger.info(response.json())
                 except httpx.HTTPStatusError as err:
                     logger.warn(f"Response error: {err}")
-                    traces.set_span_error(
-                        span_svc, "HTTPException", str(err), "".join(traceback.format_stack())
-                    )
+                    traces.set_span_error(span_svc, "HTTPException", str(err), "".join(traceback.format_stack()))
                     # span_svc.set_attribute(SpanAttributes.EXCEPTION_TYPE, "HTTPException")
                     # span_svc.set_attribute(SpanAttributes.EXCEPTION_MESSAGE, str(err))
                     # span_svc.set_attribute(

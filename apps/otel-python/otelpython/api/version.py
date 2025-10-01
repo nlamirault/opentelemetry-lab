@@ -5,9 +5,8 @@ import logging
 
 import fastapi
 
-from otelpython.telemetry import metrics
 from otelpython import version
-
+from otelpython.telemetry import metrics
 
 logger = logging.getLogger(__name__)
 router = fastapi.APIRouter()

@@ -7,7 +7,6 @@ import fastapi
 
 from otelpython.telemetry import metrics
 
-
 logger = logging.getLogger(__name__)
 
 router = fastapi.APIRouter()

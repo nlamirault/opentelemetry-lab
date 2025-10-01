@@ -1,12 +1,10 @@
 # SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 # SPDX-License-Identifier: Apache-2.0
 
-from opentelemetry import metrics
-from opentelemetry import trace
+from opentelemetry import metrics, trace
 from opentelemetry.sdk import resources
 
-from otelpython import settings
-from otelpython import version
+from otelpython import settings, version
 
 
 def create_resource(service_name: str) -> resources.Resource:
