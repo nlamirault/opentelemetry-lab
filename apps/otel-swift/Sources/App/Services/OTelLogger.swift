@@ -79,7 +79,7 @@ class OpenTelemetryLogger {
     logger.logLevel = .debug
     logger.handler = otelLogHandler
 
-    logger.error(
+    logger.info(
       "OpenTelemetry log configuration done",
       metadata: ["application": .string(Constants.applicationName)])
 
