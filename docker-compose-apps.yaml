@@ -25,9 +25,7 @@ services:
   #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
   #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
   #   # OpenTelemetry with HTTP
-  #   # - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://otel-collector:4318/v1/logs
-  #   # - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://otel-collector:4318/v1/metrics
-  #   # - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
+  #   # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
   #   # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
   #   - OTEL_SERVICE_NAME=otel-python
   #   command: "opentelemetry-instrument python main.py"
@@ -47,9 +45,7 @@ services:
   #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
   #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
   #   # OpenTelemetry with HTTP
-  #   # - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://otel-collector:4318/v1/logs
-  #   # - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://otel-collector:4318/v1/metrics
-  #   # - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
+  #   # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
   #   # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
   #   - OTEL_SERVICE_NAME=otel-java
   #   - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=docker,host.name=otel-demo
@@ -70,9 +66,7 @@ services:
   #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
   #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
   #   # OpenTelemetry with HTTP
-  #   # - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://otel-collector:4318/v1/logs
-  #   # - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://otel-collector:4318/v1/metrics
-  #   # - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
+  #   # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
   #   # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
   #   - OTEL_SERVICE_NAME=otel-js
   #   command: "node --require '@opentelemetry/auto-instrumentations-node/register' app.js"
@@ -92,9 +86,7 @@ services:
     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
     - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
     # OpenTelemetry with HTTP
-    # - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://otel-collector:4318/v1/logs
-    # - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://otel-collector:4318/v1/metrics
-    # - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
+    # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
     # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
     - OTEL_SERVICE_NAME=otel-rust
     # command: "otel-rust"
@@ -114,9 +106,7 @@ services:
   #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
   #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
   #   # OpenTelemetry with HTTP
-  #   # - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://otel-collector:4318/v1/logs
-  #   # - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://otel-collector:4318/v1/metrics
-  #   # - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
+  #   # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
   #   # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
   #   - OTEL_SERVICE_NAME=otel-go
   #   # command: "otel-go"
@@ -136,9 +126,7 @@ services:
   #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
   #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
   #   # OpenTelemetry with HTTP
-  #   # - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://otel-collector:4318/v1/logs
-  #   # - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://otel-collector:4318/v1/metrics
-  #   # - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
+  #   # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
   #   # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
   #   - OTEL_SERVICE_NAME=otel-swift
   #   - LOG_LEVEL=debug
@@ -158,9 +146,7 @@ services:
   #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
   #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
   #   # OpenTelemetry with HTTP
-  #   # - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://otel-collector:4318/v1/logs
-  #   # - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://otel-collector:4318/v1/metrics
-  #   # - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
+  #   # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
   #   # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
   #   - OTEL_SERVICE_NAME=otel-ts
   #   command: "node --require '@opentelemetry/auto-instrumentations-node/register' dist/index.js"
@@ -179,9 +165,7 @@ services:
   #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
   #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
   #   # OpenTelemetry with HTTP
-  #   # - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://otel-collector:4318/v1/logs
-  #   # - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://otel-collector:4318/v1/metrics
-  #   # - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
+  #   # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
   #   # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
   #   - OTEL_SERVICE_NAME=otel-react
   #   command: ""
