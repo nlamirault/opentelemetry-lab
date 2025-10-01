@@ -20,7 +20,7 @@ function setupLogger(resource, otelEndpoint, otlpProtocol) {
       break;
     case "http":
       otlpLogExporter = new otlpLogHttp.OTLPLogExporter({
-        url: otelEndpoint,
+        url: otelEndpoint + "/v1/logs",
         keepAlive: true,
       });
       break;

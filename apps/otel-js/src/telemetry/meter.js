@@ -19,7 +19,7 @@ function setupMeter(resource, otelEndpoint, otlpProtocol) {
       break;
     case "http":
       otlpMetricExporter = new otlpMetricHttp.OTLPMetricExporter({
-        url: otelEndpoint,
+        url: otelEndpoint + "/v1/metrics",
         keepAlive: true,
       });
       break;

@@ -3,9 +3,7 @@
 
 const axios = require("axios");
 const express = require("express");
-const pino = require("pino");
-
-const logger = pino();
+const { logger } = require("../middleware/logger");
 const router = express.Router();
 
 const port = process.env.EXPOSE_PORT || 3000;

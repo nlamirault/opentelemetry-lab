@@ -40,31 +40,18 @@ function createResource(serviceName) {
   );
 }
 
-
 const setup_opentelemetry = function () {
-  const otlpProtocol = process.env.OTEL_EXPORTER_OTLP_PROTOCOL || "http";
+  const otlpProtocol = process.env.OTEL_EXPORTER_OTLP_PROTOCOL || "grpc";
   const otlpEndpoint =
-    process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://otel_collector:4317";
+    process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://127.0.0.1:4317";
   const serviceName = process.env.OTEL_SERVICE_NAME || "otel-js";
 
   diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
 
   const res = createResource(serviceName);
-  const loggerProvider = setupLogger(
-    res,
-    otlpEndpoint + "/v1/logs",
-    otlpProtocol,
-  );
-  const tracerProvider = setupTracer(
-    res,
-    otlpEndpoint + "/v1/traces",
-    otlpProtocol,
-  );
-  const meterProvider = setupMeter(
-    res,
-    otlpEndpoint + "/v1/metrics",
-    otlpProtocol,
-  );
+  const loggerProvider = setupLogger(res, otlpEndpoint, otlpProtocol);
+  const tracerProvider = setupTracer(res, otlpEndpoint, otlpProtocol);
+  const meterProvider = setupMeter(res, otlpEndpoint, otlpProtocol);
 
   const sdk = new opentelemetry.NodeSDK({
     instrumentations: [
@@ -77,7 +64,13 @@ const setup_opentelemetry = function () {
       new HttpInstrumentation(),
       new ExpressInstrumentation(),
       new NetInstrumentation(),
-      new PinoInstrumentation(),
+      // new PinoInstrumentation(),
+      new PinoInstrumentation({
+        logHook: (_span, record) => {
+          record["service.name"] =
+            tracerProvider.resource.attributes["service.name"];
+        },
+      }),
     ],
     loggerProvider: loggerProvider,
     meterProvider: meterProvider,

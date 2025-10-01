@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 const express = require("express");
-const pino = require("pino");
-
-const logger = pino();
+const { logger } = require("../middleware/logger");
 const router = express.Router();
 
 router.get("/error_test", (req, res) => {

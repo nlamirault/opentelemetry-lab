@@ -7,8 +7,10 @@ const pino = require("pino");
 const routes = require("./routes/index");
 const otel = require("./telemetry/otel");
 const { initBuildInfoMetric } = require("./telemetry/metrics");
+const { logger } = require("./middleware/logger");
 
-const logger = pino();
+// const logger = pino();
+
 const app = express();
 const port = process.env.EXPOSE_PORT || 3000;
 
