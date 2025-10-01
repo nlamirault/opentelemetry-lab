@@ -17,13 +17,16 @@ export function initializeLogger(resource: Resource, otelEndpoint: string) {
     : new GRPCOTLPLogExporter({ url: otelEndpoint });
 
   const logRecordProcessor = new BatchLogRecordProcessor(logExporter);
+  const consoleLogRecordProcessor = new SimpleLogRecordProcessor(new ConsoleLogRecordExporter());
+  
   const loggerProvider = new LoggerProvider({
     resource,
+    processors: [logRecordProcessor, consoleLogRecordProcessor],
   });
-  loggerProvider.addLogRecordProcessor(logRecordProcessor);
 
   return {
+    loggerProvider,
     logRecordProcessor,
-    consoleLogRecordProcessor: new SimpleLogRecordProcessor(new ConsoleLogRecordExporter()),
+    consoleLogRecordProcessor,
   };
 }

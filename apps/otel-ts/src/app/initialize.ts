@@ -1,35 +1,39 @@
 // SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 // SPDX-License-Identifier: Apache-2.0
 
-import bodyParser from "body-parser";
-import cookieParser from "cookie-parser";
-import express from "express";
-import type { Express } from "express";
+import Fastify, { FastifyInstance } from "fastify";
+import { FastifyOtelInstrumentation } from "@fastify/otel";
 
 import { logger } from "../logger";
 import { registerRoutes } from "../routes";
+import { getLogger } from "../otel/logging";
 
-export async function initializeApp(): Promise<Express> {
-  const app = express();
+export async function initializeApp(): Promise<FastifyInstance> {
+  const fastify = Fastify({ logger: false });
 
-  // if (env.mode.prod) {
-  //   app.use((await import("compression")).default());
-  // }
+  // Register Fastify OpenTelemetry plugin
+  const fastifyOtelInstrumentation = new FastifyOtelInstrumentation({
+    servername: "otel-ts",
+  });
+  await fastify.register(fastifyOtelInstrumentation.plugin());
 
-  app.use(bodyParser.json());
-  app.use(cookieParser());
+  await registerRoutes(fastify);
 
-  await registerRoutes(app);
-
-  const port = 3333;
-
+  const port = process.env.EXPOSE_PORT || 6666;
   try {
-    await app.listen(Number(port), "0.0.0.0");
+    await fastify.listen({ port: Number(port), host: "0.0.0.0" });
 
+    // Use both loggers for now - traditional logger and OpenTelemetry logger
     logger.info(`App is running at: http://localhost:${port}`);
+
+    const otelLogger = getLogger();
+    otelLogger.emit({
+      severityText: "info",
+      body: `Bootstrap the OpenTelemetry TypeScript application on port ${port}`,
+    });
   } catch (err) {
     logger.error(err);
   }
 
-  return app;
+  return fastify;
 }
