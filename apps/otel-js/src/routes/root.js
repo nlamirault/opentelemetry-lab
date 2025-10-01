@@ -2,11 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 const express = require("express");
-const { logger } = require("../middleware/logger");
+const { getLogger } = require("../telemetry/shared");
 const router = express.Router();
 
 router.get("/", (req, res) => {
-  logger.info("Root handler");
+  const logger = getLogger();
+  logger.emit({
+    severityText: "info",
+    body: "Root handler",
+  });
   res.send("OpenTelemetry Lab / Javascript");
 });
 

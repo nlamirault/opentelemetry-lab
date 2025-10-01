@@ -64,6 +64,7 @@ const setup_opentelemetry = function () {
       new NetInstrumentation(),
       // new PinoInstrumentation(),
       new PinoInstrumentation({
+        enabled: true,
         logHook: (_span, record) => {
           record["service.name"] =
             tracerProvider.resource.attributes["service.name"];
@@ -87,6 +88,8 @@ const setup_opentelemetry = function () {
     ],
   });
   sdk.start();
+  
+  return { loggerProvider, tracerProvider, meterProvider };
 };
 
 module.exports = { setup_opentelemetry };

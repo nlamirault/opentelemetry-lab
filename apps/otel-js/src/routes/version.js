@@ -2,12 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 const express = require("express");
-const { logger } = require("../middleware/logger");
-
+const { getLogger } = require("../telemetry/shared");
 const router = express.Router();
 
 router.get("/version", (req, res) => {
-  logger.info("Version handler");
+  const logger = getLogger();
+  logger.emit({
+    severityText: "info",
+    body: "Version handler",
+  });
   res.json({ version: "v1.0.0" });
 });
 

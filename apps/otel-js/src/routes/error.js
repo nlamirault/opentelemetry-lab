@@ -2,11 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 const express = require("express");
-const { logger } = require("../middleware/logger");
+const { getLogger } = require("../telemetry/shared");
 const router = express.Router();
 
 router.get("/error_test", (req, res) => {
-  logger.error("got error!!!!");
+  const logger = getLogger();
+  logger.emit({
+    severityText: "error",
+    body: "got error!!!!",
+  });
   throw new Error("value error");
 });
 

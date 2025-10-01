@@ -3,7 +3,7 @@
 
 const express = require("express");
 const client = require("prom-client");
-const { logger } = require("../middleware/logger");
+const { getLogger } = require("../telemetry/shared");
 const router = express.Router();
 
 // Create a Registry to register the metrics
@@ -18,7 +18,11 @@ register.setDefaultLabels({
 client.collectDefaultMetrics({ register });
 
 router.get("/metrics", async (req, res) => {
-  logger.info("Prometheus metrics handler");
+  const logger = getLogger();
+  logger.emit({
+    severityText: "info",
+    body: "Prometheus metrics handler",
+  });
   res.set("Content-Type", register.contentType);
   res.end(await register.metrics());
 });
