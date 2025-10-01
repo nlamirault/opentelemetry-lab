@@ -20,7 +20,7 @@ const {
   hostDetector,
   osDetector,
   processDetector,
-  Resource,
+  resourceFromAttributes,
 } = require("@opentelemetry/resources");
 const {
   ATTR_SERVICE_NAME,
@@ -32,12 +32,10 @@ const { setupMeter } = require("./meter");
 const { setupTracer } = require("./tracer");
 
 function createResource(serviceName) {
-  return Resource.default().merge(
-    new Resource({
-      [ATTR_SERVICE_NAME]: serviceName,
-      [ATTR_SERVICE_VERSION]: "v1.0.0",
-    }),
-  );
+  return resourceFromAttributes({
+    [ATTR_SERVICE_NAME]: serviceName,
+    [ATTR_SERVICE_VERSION]: "v1.0.0",
+  });
 }
 
 const setup_opentelemetry = function () {

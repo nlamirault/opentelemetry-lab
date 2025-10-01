@@ -40,9 +40,8 @@ function setupTracer(resource, otelEndpoint, otlpProtocol) {
   const tracerProvider = new NodeTracerProvider({
     resource: resource,
     forceFlushTimeoutMillis: 10000,
+    spanProcessors: [consoleSpanProcessor, otlpSpanProcessor],
   });
-  tracerProvider.addSpanProcessor(consoleSpanProcessor);
-  tracerProvider.addSpanProcessor(otlpSpanProcessor);
 
   // tracerProvider.register({
   //   propagator: new CompositePropagator({

@@ -28,18 +28,13 @@ function setupLogger(resource, otelEndpoint, otlpProtocol) {
       console.log("OpenTelemetry logs invalid protocol: " + otlpProtocol);
   }
 
+  const batchLogRecordProcessor = new BatchLogRecordProcessor(otlpLogExporter);
+  const consoleLogRecordProcessor = new SimpleLogRecordProcessor(new ConsoleLogRecordExporter());
+
   const loggerProvider = new LoggerProvider({
     resource,
+    processors: [batchLogRecordProcessor, consoleLogRecordProcessor],
   });
-  const batchLogRecordProcessor = new BatchLogRecordProcessor({
-    exporter: otlpLogExporter,
-  });
-  loggerProvider.addLogRecordProcessor(batchLogRecordProcessor);
-
-  const consoleLogExporter = new ConsoleLogRecordExporter();
-  loggerProvider.addLogRecordProcessor(
-    new SimpleLogRecordProcessor(consoleLogExporter),
-  );
   return loggerProvider;
 }
 
