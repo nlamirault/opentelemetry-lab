@@ -37,10 +37,14 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: 📦️ Install Dependencies
-        run: npm install
+        run: |
+          cd apps/otel-js
+          npm install
 
       - name: ✅ Build Project
-        run: npm run build
+        run: |
+          cd apps/otel-js
+          npm run build
 
   docker:
     runs-on: ubuntu-latest
@@ -67,15 +71,19 @@ jobs:
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=semver,pattern={{version}}
-            type=raw,value=latest
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
 
       - name: 🐳 Build and push Docker image
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
-          context: apps/otel-js
-          file: ./Dockerfile
+          context: ./apps/otel-js
+          file: ./apps/otel-js/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: false
+          provenance: mode=max
+          sbom: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
