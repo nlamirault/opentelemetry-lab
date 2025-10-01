@@ -12,10 +12,9 @@ const { PinoInstrumentation } = require("@opentelemetry/instrumentation-pino");
 const {
   containerDetector,
 } = require("@opentelemetry/resource-detector-container");
-// const {alibabaCloudEcsDetector} = require('@opentelemetry/resource-detector-alibaba-cloud')
-// const {awsEc2Detector, awsEksDetector} = require('@opentelemetry/resource-detector-aws')
-// const {gcpDetector} = require('@opentelemetry/resource-detector-gcp')
 const {
+  defaultResource,
+  detectResources,
   envDetector,
   hostDetector,
   osDetector,
@@ -32,10 +31,21 @@ const { setupMeter } = require("./meter");
 const { setupTracer } = require("./tracer");
 
 function createResource(serviceName) {
-  return resourceFromAttributes({
+  const detectedResources = detectResources({
+    detectors: [
+      envDetector,
+      processDetector,
+      hostDetector,
+      osDetector,
+      containerDetector,
+    ],
+  });
+  const customResource = resourceFromAttributes({
     [ATTR_SERVICE_NAME]: serviceName,
     [ATTR_SERVICE_VERSION]: "v1.0.0",
   });
+
+  return defaultResource().merge(detectedResources).merge(customResource);
 }
 
 const setup_opentelemetry = function () {
@@ -46,10 +56,14 @@ const setup_opentelemetry = function () {
 
   diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
 
-  const res = createResource(serviceName);
-  const loggerProvider = setupLogger(res, otlpEndpoint, otlpProtocol);
-  const tracerProvider = setupTracer(res, otlpEndpoint, otlpProtocol);
-  const meterProvider = setupMeter(res, otlpEndpoint, otlpProtocol);
+  // Create base resource with service info and SDK attributes
+  const baseResource = createResource(serviceName);
+
+  // The NodeSDK will automatically detect and merge additional resources
+  // from the configured resourceDetectors (OS, Process, Host, Container, etc.)
+  const loggerProvider = setupLogger(baseResource, otlpEndpoint, otlpProtocol);
+  const tracerProvider = setupTracer(baseResource, otlpEndpoint, otlpProtocol);
+  const meterProvider = setupMeter(baseResource, otlpEndpoint, otlpProtocol);
 
   const sdk = new opentelemetry.NodeSDK({
     instrumentations: [
@@ -74,7 +88,7 @@ const setup_opentelemetry = function () {
     loggerProvider: loggerProvider,
     meterProvider: meterProvider,
     tracerProvider: tracerProvider,
-    resource: res,
+    resource: baseResource,
     resourceDetectors: [
       containerDetector,
       envDetector,
@@ -88,7 +102,7 @@ const setup_opentelemetry = function () {
     ],
   });
   sdk.start();
-  
+
   return { loggerProvider, tracerProvider, meterProvider };
 };
 
