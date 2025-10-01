@@ -16,7 +16,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [ 24, 25, 26 ]
+        node-version: [ 22, 24 ]
 
     name: Build with Node ${{ matrix.node-version }}
 
