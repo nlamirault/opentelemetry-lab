@@ -41,15 +41,18 @@ def setup(resource: resources.Resource, otlp_endpoint: str, otlp_protocol: str) 
 
     metrics_readers = []
 
+    logger.info("Add the OTLP metric experter")
     otlp_reader = export.PeriodicExportingMetricReader(otlp_metric_exporter)
     metrics_readers.append(otlp_reader)
 
     if os.getenv("OTEL_ENABLE_CONSOLE", "false").lower() == "true":
+        logger.info("Add the Console metric experter")
         console_metric_exporter = export.ConsoleMetricExporter()
         console_reader = export.PeriodicExportingMetricReader(console_metric_exporter)
         metrics_readers.append(console_reader)
-        logger.info("Console metrics enabled")
+        # logger.info("Console metrics enabled")
 
+    logger.info("Add the Prometheus experter")
     prom_reader = prometheus.PrometheusMetricReader(prefix)
     metrics_readers.append(prom_reader)
 

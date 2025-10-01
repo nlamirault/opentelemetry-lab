@@ -16,6 +16,7 @@ import {
   useLocation,
   useNavigationType,
 } from "react-router-dom";
+import { METRIC_BUILD_INFO } from "../constants";
 
 export function initializeFaro(): Faro {
   const serviceName = process.env.OTEL_SERVICE_NAME || "otel-react";
@@ -68,6 +69,15 @@ export function initializeFaro(): Faro {
   });
 
   faro.api.pushLog(["Faro was initialized"]);
+
+  // Create build info metric
+  // Note: Faro uses OpenTelemetry under the hood, but for frontend apps
+  // we'll add this as a custom event/metric through Faro's API
+  faro.api.pushEvent(METRIC_BUILD_INFO, {
+    language: "react",
+    version: "v1.0.0",
+    service: serviceName,
+  });
 
   return faro;
 }

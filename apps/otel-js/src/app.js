@@ -6,12 +6,17 @@ const pino = require("pino");
 
 const routes = require("./routes/index");
 const otel = require("./telemetry/otel");
+const { initBuildInfoMetric } = require("./telemetry/metrics");
 
 const logger = pino();
 const app = express();
 const port = process.env.EXPOSE_PORT || 3000;
 
 otel.setup_opentelemetry();
+
+// Initialize build info metric after OpenTelemetry setup
+const serviceName = process.env.OTEL_SERVICE_NAME || "otel-js";
+initBuildInfoMetric(serviceName);
 
 logger.info("Bootstrap the OpenTelemetry application");
 

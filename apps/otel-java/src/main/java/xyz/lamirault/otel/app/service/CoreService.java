@@ -24,7 +24,7 @@ public class CoreService {
     logger.info("retrieve date");
 
     Span span = Span.current();
-    span.setAttribute("peer.service", "random-date-service");
+    span.setAttribute("service.name", "random-date-service");
 
     int day = new Random().nextInt(365);
     LocalDate date = LocalDate.now().withDayOfYear(1 + day);

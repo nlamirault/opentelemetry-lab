@@ -4,6 +4,11 @@
 package xyz.lamirault.otel.app;
 
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.metrics.LongCounter;
+import io.opentelemetry.api.metrics.Meter;
+import io.opentelemetry.semconv.ServiceAttributes;
+import io.opentelemetry.semconv.TelemetryAttributes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -17,6 +22,7 @@ public class AppApplication {
   private static final Logger logger = LoggerFactory.getLogger(
     AppApplication.class
   );
+  private static final String METRIC_BUILD_INFO = "opentelemetry.lab.build.info";
 
   private final OpenTelemetryConfiguration openTelemetryConfiguration;
 
@@ -36,6 +42,23 @@ public class AppApplication {
 
   @Bean
   public OpenTelemetry openTelemetry() {
-    return openTelemetryConfiguration.configureOpenTelemetry();
+    OpenTelemetry openTelemetry =
+      openTelemetryConfiguration.configureOpenTelemetry();
+
+    // Create build info metric
+    Meter meter = openTelemetry.meterBuilder("otel-java").build();
+    LongCounter buildInfo = meter
+      .counterBuilder(METRIC_BUILD_INFO)
+      .build();
+    buildInfo.add(
+      1,
+      Attributes.builder()
+        .put(TelemetryAttributes.TELEMETRY_SDK_LANGUAGE, "java")
+        .put(ServiceAttributes.SERVICE_NAME, serviceName())
+        .put(ServiceAttributes.SERVICE_VERSION, "v1.0.0")
+        .build()
+    );
+
+    return openTelemetry;
   }
 }

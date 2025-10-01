@@ -13,11 +13,12 @@ use tracing::info;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::EnvFilter;
 
-mod handlers;
+mod routes;
 mod otel;
+mod constants;
 
-use handlers::{handler_chain, handler_health, handler_root, handler_version};
-use otel::{create_resource, init_logger, init_meter, init_tracer};
+use routes::{handler_chain, handler_health, handler_root, handler_version};
+use otel::{create_resource, init_logger, init_meter, init_tracer, init_build_info};
 
 fn setup_opentelemetry() -> anyhow::Result<()> {
     let default_endpoint = "http://localhost:4317".to_string();
@@ -51,7 +52,10 @@ fn setup_opentelemetry() -> anyhow::Result<()> {
 
     global::set_text_map_propagator(TraceContextPropagator::new());
     global::set_tracer_provider(tracer_provider);
-    global::set_meter_provider(meter_provider);
+    global::set_meter_provider(meter_provider.clone());
+
+    // Initialize build info metric
+    init_build_info(&meter_provider);
 
     Ok(())
 }

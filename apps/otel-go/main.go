@@ -112,6 +112,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Initialize build info metric
+	if err = telemetry.InitBuildInfo(ctx, mp, serviceName); err != nil {
+		log.Fatal(err)
+	}
+
 	r := router.New(serviceName)
 	r.SetupRoutes()
 

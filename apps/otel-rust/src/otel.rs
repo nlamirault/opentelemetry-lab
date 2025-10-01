@@ -12,3 +12,6 @@ pub use otel_meter::init_meter;
 
 mod otel_tracer;
 pub use otel_tracer::init_tracer;
+
+mod metrics;
+pub use metrics::init_build_info;

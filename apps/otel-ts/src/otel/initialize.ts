@@ -1,22 +1,13 @@
 // SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 // SPDX-License-Identifier: Apache-2.0
 
-// import packageJson from '../../package.json';
 import {
   diag,
-  // Context,
   DiagConsoleLogger,
   DiagLogLevel,
 } from "@opentelemetry/api";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import process from "process";
-// import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
-import { OTLPLogExporter as GRPCOTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-grpc";
-import { OTLPLogExporter as HTTPOTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
-import { OTLPMetricExporter as GRPCOTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-grpc";
-import { OTLPMetricExporter as HTTPOTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
-import { OTLPTraceExporter as GRPCOTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-grpc";
-import { OTLPTraceExporter as HTTPOTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { NetInstrumentation } from "@opentelemetry/instrumentation-net";
 import {
@@ -26,19 +17,10 @@ import {
   processDetectorSync,
   Resource,
 } from "@opentelemetry/resources";
-import {
-  BatchLogRecordProcessor,
-  ConsoleLogRecordExporter,
-  LoggerProvider,
-  SimpleLogRecordProcessor,
-} from "@opentelemetry/sdk-logs";
-import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
-import {
-  BatchSpanProcessor,
-  ConsoleSpanExporter,
-  SimpleSpanProcessor,
-} from "@opentelemetry/sdk-trace-base";
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions";
+import { initializeLogger } from "./logger";
+import { initializeMeter, createBuildInfoMetric } from "./meter";
+import { initializeTracer } from "./tracer";
 
 // Init
 
@@ -46,58 +28,33 @@ export function initializeOpenTelemetry() {
   // OpenTelemetry debug
   diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
 
-  const serviceName = process.env.OTEL_SERVICE_NAME || "otel-react";
+  const serviceName = process.env.OTEL_SERVICE_NAME || "otel-ts";
   const resource = Resource.default().merge(
     new Resource({
       [ATTR_SERVICE_NAME]: serviceName,
-      // [ATTR_SERVICE_VERSION]: packageJson.version,
       [ATTR_SERVICE_VERSION]: "1.0.0",
     }),
   );
 
-  const otelEndpoint = process.env.'OTEL_EXPORTER_OTLP_ENDPOINT' || "http://otel_collector:4318";
+  const otelEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://otel_collector:4318";
 
-  const logExporter = process.env.OTEL_EXPORTER_OTLP_PROTOCOL === "HTTP"
-    ? new HTTPOTLPLogExporter({ url: otelEndpoint + "/v1/logs", keepAlive: true })
-    : new GRPCOTLPLogExporter({ url: otelEndpoint });
-
-  const logRecordProcessor = new BatchLogRecordProcessor(logExporter);
-  const loggerProvider = new LoggerProvider({
-    resource,
-  });
-  loggerProvider.addLogRecordProcessor(logRecordProcessor);
-
-  const metricExporter = process.env.OTEL_EXPORTER_OTLP_PROTOCOL === "HTTP"
-    ? new HTTPOTLPMetricExporter({ url: otelEndpoint + "/v1/metrics", keepAlive: true })
-    : new GRPCOTLPMetricExporter({ url: otelEndpoint });
-  const metricReader = new PeriodicExportingMetricReader({
-    exporter: metricExporter,
-    exportIntervalMillis: 5000,
-  });
-
-  const traceExporter = process.env.OTEL_EXPORTER_OTLP_PROTOCOL === "HTTP"
-    ? new HTTPOTLPTraceExporter({ url: otelEndpoint + "/v1/traces", keepAlive: true })
-    : new GRPCOTLPTraceExporter({ url: otelEndpoint });
-  const spanProcessor = new BatchSpanProcessor(traceExporter);
+  // Initialize components using split modules
+  const { logRecordProcessor, consoleLogRecordProcessor } = initializeLogger(resource, otelEndpoint);
+  const metricReader = initializeMeter(otelEndpoint);
+  const { spanProcessor, consoleSpanProcessor } = initializeTracer(otelEndpoint);
 
   const sdk = new NodeSDK({
     instrumentations: [
-      // getNodeAutoInstrumentations({
-      //   // only instrument fs if it is part of another trace
-      //   "@opentelemetry/instrumentation-fs": {
-      //     requireParentSpan: true,
-      //   },
-      // }),
       new HttpInstrumentation(),
       new NetInstrumentation(),
     ],
     spanProcessors: [
       spanProcessor,
-      new SimpleSpanProcessor(new ConsoleSpanExporter()),
+      consoleSpanProcessor,
     ],
     logRecordProcessors: [
       logRecordProcessor,
-      new SimpleLogRecordProcessor(new ConsoleLogRecordExporter()),
+      consoleLogRecordProcessor,
     ],
     metricReader: metricReader,
     resource: resource,
@@ -106,13 +63,12 @@ export function initializeOpenTelemetry() {
       hostDetectorSync,
       osDetectorSync,
       processDetectorSync,
-      // alibabaCloudEcsDetector,
-      // awsEksDetector,
-      // awsEc2Detector,
-      // gcpDetector
     ],
   });
   sdk.start();
+
+  // Create build info metric
+  createBuildInfoMetric(serviceName);
 
   return;
 }
