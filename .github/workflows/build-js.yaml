@@ -44,7 +44,7 @@ jobs:
       - name: ✅ Build Project
         run: |
           cd apps/otel-js
-          yarn package
+          yarn pack
 
   docker:
     runs-on: ubuntu-latest
