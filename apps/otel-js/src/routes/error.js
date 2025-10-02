@@ -1,15 +1,17 @@
 // SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 // SPDX-License-Identifier: Apache-2.0
 
-const express = require("express");
-const pino = require("pino");
+const { getLogger } = require("../telemetry/shared");
 
-const logger = pino();
-const router = express.Router();
+async function errorRoutes(fastify) {
+  fastify.get("/error_test", async (request, reply) => {
+    const logger = getLogger();
+    logger.emit({
+      severityText: "error",
+      body: "got error!!!!",
+    });
+    throw new Error("value error");
+  });
+}
 
-router.get("/error_test", (req, res) => {
-  logger.error("got error!!!!");
-  throw new Error("value error");
-});
-
-module.exports = router;
+module.exports = errorRoutes;

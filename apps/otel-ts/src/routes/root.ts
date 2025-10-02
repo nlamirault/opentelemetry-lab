@@ -1,14 +1,18 @@
 // SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 // SPDX-License-Identifier: Apache-2.0
 
-import { Request, Response, Router } from "express";
+import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import { getLogger } from "../otel/logging";
 
-export function registerRootRoutes(): Router {
-  const router = Router();
-  
-  router.get("/", (request: Request, response: Response) => {
-    response.send("OpenTelemetry Lab / Typescript");
+export async function registerRootRoutes(
+  fastify: FastifyInstance,
+): Promise<void> {
+  fastify.get("/", async (request: FastifyRequest, reply: FastifyReply) => {
+    const logger = getLogger();
+    logger.emit({
+      severityText: "info",
+      body: "Root handler",
+    });
+    return reply.send("OpenTelemetry Lab / Typescript");
   });
-
-  return router;
 }

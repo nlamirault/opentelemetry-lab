@@ -1,15 +1,17 @@
 // SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 // SPDX-License-Identifier: Apache-2.0
 
-const express = require("express");
-const pino = require("pino");
+const { getLogger } = require("../telemetry/shared");
 
-const logger = pino();
-const router = express.Router();
+async function healthRoutes(fastify) {
+  fastify.get("/health", async (request, reply) => {
+    const logger = getLogger();
+    logger.emit({
+      severityText: "info",
+      body: "Health handler",
+    });
+    return reply.send({ status: "ok" });
+  });
+}
 
-router.get("/health", (req, res) => {
-  logger.info("Health handler");
-  res.json({ status: "ok" });
-});
-
-module.exports = router;
+module.exports = healthRoutes;

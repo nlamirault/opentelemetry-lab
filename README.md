@@ -4,13 +4,26 @@
 
 ![Architecture](doc/diagram.png)
 
+## OpenTelemetry
+
+| Language   | Logs | Metrics | Traces |
+| ---------- | ---- | ------- | ------ |
+| Go         | ✅   |         |        |
+| Java       |      |         |        |
+| Javascript | ✅   |         |        |
+| Python     | ✅   |         |        |
+| React      |      |         |        |
+| Rust       | ✅   |         |        |
+| Swift      | ✅   |         |        |
+| TypeScript |      |         |        |
+
 ## Usage
 
 You could choose which Observability stack you want to use:
 
-- [x] lgtm: Prometheus, Loki, Tempo
-- [x] clickhouse: Clickhouse
-- [x] greptimedb: GreptimeDB
+- ✅ lgtm: Prometheus, Loki, Tempo
+- ✅ clickhouse: Clickhouse
+- ✅ greptimedb: GreptimeDB
 
 ```shell
 make docker-run CHOICE=xxx
@@ -20,16 +33,16 @@ make docker-run CHOICE=xxx
 
 ### Core Services
 
-| Public Port | Container Port | Service                 | Description                 |
-| ----------- | -------------- | ----------------------- | --------------------------- |
-| 4317        | 4317           | OpenTelemetry Collector | OTLP gRPC receiver          |
-| 4318        | 4318           | OpenTelemetry Collector | OTLP HTTP receiver          |
-| 8889        | 8889           | OpenTelemetry Collector | Prometheus metrics exporter |
-| 12345       | 12345          | Alloy                   | Grafana Alloy HTTP server   |
-| 4417        | 4317           | Tempo (core)            | OTLP gRPC receiver for traces (docker-compose.yaml) |
-| 4418        | 4318           | Tempo (core)            | OTLP HTTP receiver for traces (docker-compose.yaml) |
+| Public Port | Container Port | Service                 | Description                                            |
+| ----------- | -------------- | ----------------------- | ------------------------------------------------------ |
+| 4317        | 4317           | OpenTelemetry Collector | OTLP gRPC receiver                                     |
+| 4318        | 4318           | OpenTelemetry Collector | OTLP HTTP receiver                                     |
+| 8889        | 8889           | OpenTelemetry Collector | Prometheus metrics exporter                            |
+| 12345       | 12345          | Alloy                   | Grafana Alloy HTTP server                              |
+| 4417        | 4317           | Tempo (core)            | OTLP gRPC receiver for traces (docker-compose.yaml)    |
+| 4418        | 4318           | Tempo (core)            | OTLP HTTP receiver for traces (docker-compose.yaml)    |
 | 9090        | 9090           | Prometheus (core)       | Metrics collection and query API (docker-compose.yaml) |
-| 3000        | 3000           | Grafana (core)          | Web UI for dashboards (docker-compose.yaml) |
+| 3000        | 3000           | Grafana (core)          | Web UI for dashboards (docker-compose.yaml)            |
 
 ### Application Services
 

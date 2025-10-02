@@ -5,22 +5,18 @@ const opentelemetry = require("@opentelemetry/sdk-node");
 const { DiagConsoleLogger, DiagLogLevel, diag } = require("@opentelemetry/api");
 const { HttpInstrumentation } = require("@opentelemetry/instrumentation-http");
 const { NetInstrumentation } = require("@opentelemetry/instrumentation-net");
-const {
-  ExpressInstrumentation,
-} = require("@opentelemetry/instrumentation-express");
 const { PinoInstrumentation } = require("@opentelemetry/instrumentation-pino");
 const {
   containerDetector,
 } = require("@opentelemetry/resource-detector-container");
-// const {alibabaCloudEcsDetector} = require('@opentelemetry/resource-detector-alibaba-cloud')
-// const {awsEc2Detector, awsEksDetector} = require('@opentelemetry/resource-detector-aws')
-// const {gcpDetector} = require('@opentelemetry/resource-detector-gcp')
 const {
+  defaultResource,
+  detectResources,
   envDetector,
   hostDetector,
   osDetector,
   processDetector,
-  Resource,
+  resourceFromAttributes,
 } = require("@opentelemetry/resources");
 const {
   ATTR_SERVICE_NAME,
@@ -32,39 +28,39 @@ const { setupMeter } = require("./meter");
 const { setupTracer } = require("./tracer");
 
 function createResource(serviceName) {
-  return Resource.default().merge(
-    new Resource({
-      [ATTR_SERVICE_NAME]: serviceName,
-      [ATTR_SERVICE_VERSION]: "v1.0.0",
-    }),
-  );
+  const detectedResources = detectResources({
+    detectors: [
+      envDetector,
+      processDetector,
+      hostDetector,
+      osDetector,
+      containerDetector,
+    ],
+  });
+  const customResource = resourceFromAttributes({
+    [ATTR_SERVICE_NAME]: serviceName,
+    [ATTR_SERVICE_VERSION]: "v1.0.0",
+  });
+
+  return defaultResource().merge(detectedResources).merge(customResource);
 }
 
-
 const setup_opentelemetry = function () {
-  const otlpProtocol = process.env.OTEL_EXPORTER_OTLP_PROTOCOL || "http";
+  const otlpProtocol = process.env.OTEL_EXPORTER_OTLP_PROTOCOL || "grpc";
   const otlpEndpoint =
-    process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://otel_collector:4317";
+    process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://127.0.0.1:4317";
   const serviceName = process.env.OTEL_SERVICE_NAME || "otel-js";
 
   diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
 
-  const res = createResource(serviceName);
-  const loggerProvider = setupLogger(
-    res,
-    otlpEndpoint + "/v1/logs",
-    otlpProtocol,
-  );
-  const tracerProvider = setupTracer(
-    res,
-    otlpEndpoint + "/v1/traces",
-    otlpProtocol,
-  );
-  const meterProvider = setupMeter(
-    res,
-    otlpEndpoint + "/v1/metrics",
-    otlpProtocol,
-  );
+  // Create base resource with service info and SDK attributes
+  const baseResource = createResource(serviceName);
+
+  // The NodeSDK will automatically detect and merge additional resources
+  // from the configured resourceDetectors (OS, Process, Host, Container, etc.)
+  const loggerProvider = setupLogger(baseResource, otlpEndpoint, otlpProtocol);
+  const tracerProvider = setupTracer(baseResource, otlpEndpoint, otlpProtocol);
+  const meterProvider = setupMeter(baseResource, otlpEndpoint, otlpProtocol);
 
   const sdk = new opentelemetry.NodeSDK({
     instrumentations: [
@@ -75,14 +71,20 @@ const setup_opentelemetry = function () {
       //   },
       // }),
       new HttpInstrumentation(),
-      new ExpressInstrumentation(),
       new NetInstrumentation(),
-      new PinoInstrumentation(),
+      // new PinoInstrumentation(),
+      new PinoInstrumentation({
+        enabled: true,
+        logHook: (_span, record) => {
+          record["service.name"] =
+            tracerProvider.resource.attributes["service.name"];
+        },
+      }),
     ],
     loggerProvider: loggerProvider,
     meterProvider: meterProvider,
     tracerProvider: tracerProvider,
-    resource: res,
+    resource: baseResource,
     resourceDetectors: [
       containerDetector,
       envDetector,
@@ -96,6 +98,8 @@ const setup_opentelemetry = function () {
     ],
   });
   sdk.start();
+
+  return { loggerProvider, tracerProvider, meterProvider };
 };
 
 module.exports = { setup_opentelemetry };

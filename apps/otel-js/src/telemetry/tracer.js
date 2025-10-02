@@ -25,7 +25,7 @@ function setupTracer(resource, otelEndpoint, otlpProtocol) {
       break;
     case "http":
       traceExporter = new otlpTraceHttp.OTLPTraceExporter({
-        url: otelEndpoint,
+        url: otelEndpoint + "/v1/traces",
         keepAlive: true,
       });
       break;
@@ -40,17 +40,17 @@ function setupTracer(resource, otelEndpoint, otlpProtocol) {
   const tracerProvider = new NodeTracerProvider({
     resource: resource,
     forceFlushTimeoutMillis: 10000,
+    spanProcessors: [consoleSpanProcessor, otlpSpanProcessor],
   });
-  tracerProvider.addSpanProcessor(consoleSpanProcessor);
-  tracerProvider.addSpanProcessor(otlpSpanProcessor);
-  tracerProvider.register({
-    propagator: new CompositePropagator({
-      propagators: [
-        new W3CBaggagePropagator(),
-        new W3CTraceContextPropagator(),
-      ],
-    }),
-  });
+
+  // tracerProvider.register({
+  //   propagator: new CompositePropagator({
+  //     propagators: [
+  //       new W3CBaggagePropagator(),
+  //       new W3CTraceContextPropagator(),
+  //     ],
+  //   }),
+  // });
 
   return tracerProvider;
 }

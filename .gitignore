@@ -27,7 +27,7 @@ apps/otel-js/node_modules
 
 # Typescript
 apps/otel-ts/dist
-apps/otel-ts/src/node_modules
+apps/otel-ts/node_modules
 
 # React
 apps/otel-react/node_modules
@@ -35,3 +35,4 @@ apps/otel-react/node_modules
 # Python
 .venv
 **/__pycache__/
+

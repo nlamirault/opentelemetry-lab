@@ -15,10 +15,6 @@ area/go:
 - changed-files:
   - any-glob-to-any-file: apps/otel-go/**
 
-area/python:
-- changed-files:
-  - any-glob-to-any-file: apps/otel-python/**
-
 area/java:
 - changed-files:
   - any-glob-to-any-file: apps/otel-java/**
@@ -27,6 +23,14 @@ area/js:
 - changed-files:
   - any-glob-to-any-file: apps/otel-js/**
 
+area/python:
+- changed-files:
+  - any-glob-to-any-file: apps/otel-python/**
+
+area/react:
+- changed-files:
+  - any-glob-to-any-file: apps/otel-react/**
+
 area/rust:
 - changed-files:
   - any-glob-to-any-file: apps/otel-rust/**
@@ -34,3 +38,7 @@ area/rust:
 area/swift:
 - changed-files:
   - any-glob-to-any-file: apps/otel-swift/**
+
+area/ts:
+- changed-files:
+  - any-glob-to-any-file: apps/otel-ts/**

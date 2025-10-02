@@ -1,26 +1,29 @@
 // SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 // SPDX-License-Identifier: Apache-2.0
 
-import {
-  diag,
-  DiagConsoleLogger,
-  DiagLogLevel,
-} from "@opentelemetry/api";
+import { diag, DiagConsoleLogger, DiagLogLevel } from "@opentelemetry/api";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import process from "process";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { NetInstrumentation } from "@opentelemetry/instrumentation-net";
 import {
-  envDetectorSync,
-  hostDetectorSync,
-  osDetectorSync,
-  processDetectorSync,
-  Resource,
+  defaultResource,
+  detectResources,
+  envDetector,
+  hostDetector,
+  osDetector,
+  processDetector,
+  resourceFromAttributes,
 } from "@opentelemetry/resources";
-import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions";
+import { containerDetector } from "@opentelemetry/resource-detector-container";
+import {
+  ATTR_SERVICE_NAME,
+  ATTR_SERVICE_VERSION,
+} from "@opentelemetry/semantic-conventions";
 import { initializeLogger } from "./logger";
 import { initializeMeter, createBuildInfoMetric } from "./meter";
 import { initializeTracer } from "./tracer";
+import { setLoggerProvider } from "./logging";
 
 // Init
 
@@ -29,41 +32,42 @@ export function initializeOpenTelemetry() {
   diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
 
   const serviceName = process.env.OTEL_SERVICE_NAME || "otel-ts";
-  const resource = Resource.default().merge(
-    new Resource({
-      [ATTR_SERVICE_NAME]: serviceName,
-      [ATTR_SERVICE_VERSION]: "1.0.0",
-    }),
-  );
 
-  const otelEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://otel_collector:4318";
+  // Create resource with detected and custom attributes like JavaScript implementation
+  const detectedResources = detectResources({
+    detectors: [
+      envDetector,
+      processDetector,
+      hostDetector,
+      osDetector,
+      containerDetector,
+    ],
+  });
+  const customResource = resourceFromAttributes({
+    [ATTR_SERVICE_NAME]: serviceName,
+    [ATTR_SERVICE_VERSION]: "v1.0.0",
+  });
+
+  const resource = defaultResource()
+    .merge(detectedResources)
+    .merge(customResource);
+
+  const otelEndpoint =
+    process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://otel_collector:4318";
 
   // Initialize components using split modules
-  const { logRecordProcessor, consoleLogRecordProcessor } = initializeLogger(resource, otelEndpoint);
+  const { loggerProvider, logRecordProcessor, consoleLogRecordProcessor } =
+    initializeLogger(resource, otelEndpoint);
   const metricReader = initializeMeter(otelEndpoint);
-  const { spanProcessor, consoleSpanProcessor } = initializeTracer(otelEndpoint);
+  const { spanProcessor, consoleSpanProcessor } =
+    initializeTracer(otelEndpoint);
+
+  // Set the logging logger provider
+  setLoggerProvider(loggerProvider);
 
   const sdk = new NodeSDK({
-    instrumentations: [
-      new HttpInstrumentation(),
-      new NetInstrumentation(),
-    ],
-    spanProcessors: [
-      spanProcessor,
-      consoleSpanProcessor,
-    ],
-    logRecordProcessors: [
-      logRecordProcessor,
-      consoleLogRecordProcessor,
-    ],
-    metricReader: metricReader,
+    instrumentations: [new HttpInstrumentation(), new NetInstrumentation()],
     resource: resource,
-    resourceDetectors: [
-      envDetectorSync,
-      hostDetectorSync,
-      osDetectorSync,
-      processDetectorSync,
-    ],
   });
   sdk.start();
 
