@@ -24,12 +24,16 @@ on: # yamllint disable-line rule:truthy
 
 jobs:
   triage:
+    permissions:
+      contents: read
+      pull-requests: write
     runs-on: ubuntu-latest
+
     steps:
     - name: Monitor Actions
       uses: GitHubSecurityLab/actions-permissions/monitor@v1
       with:
         config: ${{ vars.PERMISSIONS_CONFIG }}
-    - uses: actions/labeler@v5.0.0
+    - uses: actions/labeler@f1a63e87db0c6baf19c5713083f8d00d789ca184 # v6.0.0
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"

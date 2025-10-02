@@ -1,10 +1,8 @@
 // SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 // SPDX-License-Identifier: Apache-2.0
 
-const express = require("express");
 const client = require("prom-client");
 const { getLogger } = require("../telemetry/shared");
-const router = express.Router();
 
 // Create a Registry to register the metrics
 const register = new client.Registry();
@@ -17,14 +15,16 @@ register.setDefaultLabels({
 // Enable the collection of default metrics
 client.collectDefaultMetrics({ register });
 
-router.get("/metrics", async (req, res) => {
-  const logger = getLogger();
-  logger.emit({
-    severityText: "info",
-    body: "Prometheus metrics handler",
+async function metricsRoutes(fastify) {
+  fastify.get("/metrics", async (request, reply) => {
+    const logger = getLogger();
+    logger.emit({
+      severityText: "info",
+      body: "Prometheus metrics handler",
+    });
+    reply.header("Content-Type", register.contentType);
+    return reply.send(await register.metrics());
   });
-  res.set("Content-Type", register.contentType);
-  res.end(await register.metrics());
-});
+}
 
-module.exports = router;
+module.exports = metricsRoutes;

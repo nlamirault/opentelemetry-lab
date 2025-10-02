@@ -5,9 +5,6 @@ const opentelemetry = require("@opentelemetry/sdk-node");
 const { DiagConsoleLogger, DiagLogLevel, diag } = require("@opentelemetry/api");
 const { HttpInstrumentation } = require("@opentelemetry/instrumentation-http");
 const { NetInstrumentation } = require("@opentelemetry/instrumentation-net");
-const {
-  ExpressInstrumentation,
-} = require("@opentelemetry/instrumentation-express");
 const { PinoInstrumentation } = require("@opentelemetry/instrumentation-pino");
 const {
   containerDetector,
@@ -74,7 +71,6 @@ const setup_opentelemetry = function () {
       //   },
       // }),
       new HttpInstrumentation(),
-      new ExpressInstrumentation(),
       new NetInstrumentation(),
       // new PinoInstrumentation(),
       new PinoInstrumentation({
