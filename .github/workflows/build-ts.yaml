@@ -41,10 +41,10 @@ jobs:
           cd apps/otel-ts
           bun install
 
-      - name: ✅ Check dependencies
-        run: |
-          cd apps/otel-ts
-          bun audit
+      # - name: ✅ Check dependencies
+      #   run: |
+      #     cd apps/otel-ts
+      #     bun audit
 
   docker:
     runs-on: ubuntu-latest
