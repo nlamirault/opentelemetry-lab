@@ -12,64 +12,66 @@ x-common: &common
       max-file: "3"
 
 services:
-  # otel-python:
-  #   !!merge <<: *common
-  #   build: ./apps/otel-python/
-  #   ports:
-  #   - "8000:8000"
-  #   environment:
-  #   - EXPOSE_PORT=8000
-  #   - TARGET_ONE_SVC=http://otel-js:7700
-  #   - TARGET_TWO_SVC=http://otel-java:7750
-  #   # OpenTelemetry with GRPC
-  #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-  #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-  #   # OpenTelemetry with HTTP
-  #   # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-  #   # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
-  #   - OTEL_SERVICE_NAME=otel-python
-  #   command: "opentelemetry-instrument python main.py"
+  otel-python:
+    !!merge <<: *common
+    build: ./apps/otel-python/
+    ports:
+    - "8000:8000"
+    environment:
+    - EXPOSE_PORT=8000
+    - TARGET_ONE_SVC=http://otel-js:7700
+    - TARGET_TWO_SVC=http://otel-java:7750
+    # OpenTelemetry with GRPC
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    # OpenTelemetry with HTTP
+    # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
+    - OTEL_SERVICE_NAME=otel-python
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker, service.instance.id=otel-python-docker-compose,service.name=otel-python, service.version=v1.0.0
+    command: "opentelemetry-instrument python main.py"
 
 
-  # otel-java:
-  #   !!merge <<: *common
-  #   build: ./apps/otel-java/
-  #   container_name: otel-java
-  #   ports:
-  #   - "8080:8080"
-  #   environment:
-  #   - EXPOSE_PORT=8080
-  #   - TARGET_ONE_SVC=http://otel-python:7740
-  #   - TARGET_TWO_SVC=http://otel-js:7700
-  #   # OpenTelemetry with GRPC
-  #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-  #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-  #   # OpenTelemetry with HTTP
-  #   # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-  #   # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
-  #   - OTEL_SERVICE_NAME=otel-java
-  #   - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=docker,host.name=otel-demo
-  #   command: "java -javaagent:/opentelemetry-javaagent.jar -jar /app.jar"
+  otel-java:
+    !!merge <<: *common
+    build: ./apps/otel-java/
+    container_name: otel-java
+    ports:
+    - "8080:8080"
+    environment:
+    - EXPOSE_PORT=8080
+    - TARGET_ONE_SVC=http://otel-python:7740
+    - TARGET_TWO_SVC=http://otel-js:7700
+    # OpenTelemetry with GRPC
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    # OpenTelemetry with HTTP
+    # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
+    - OTEL_SERVICE_NAME=otel-java
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker, service.instance.id=otel-java-docker,service.name=otel-java, service.version=v1.0.0
+    command: "java -javaagent:/opentelemetry-javaagent.jar -jar /app.jar"
 
 
-  # otel-js:
-  #   !!merge <<: *common
-  #   build: ./apps/otel-js/
-  #   container_name: otel-js
-  #   ports:
-  #   - "3001:3001"
-  #   environment:
-  #   - EXPOSE_PORT=3001
-  #   - TARGET_ONE_SVC=http://otel-go:7760
-  #   - TARGET_TWO_SVC=http://otel-rust:7770
-  #   # OpenTelemetry with GRPC
-  #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-  #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-  #   # OpenTelemetry with HTTP
-  #   # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-  #   # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
-  #   - OTEL_SERVICE_NAME=otel-js
-  #   command: "node --require '@opentelemetry/auto-instrumentations-node/register' app.js"
+  otel-js:
+    !!merge <<: *common
+    build: ./apps/otel-js/
+    container_name: otel-js
+    ports:
+    - "3001:3001"
+    environment:
+    - EXPOSE_PORT=3001
+    - TARGET_ONE_SVC=http://otel-go:7760
+    - TARGET_TWO_SVC=http://otel-rust:7770
+    # OpenTelemetry with GRPC
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    # OpenTelemetry with HTTP
+    # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
+    - OTEL_SERVICE_NAME=otel-js
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker, service.instance.id=otel-js-docker,service.name=otel-js, service.version=v1.0.0
+    command: "node --require '@opentelemetry/auto-instrumentations-node/register' app.js"
 
 
   otel-rust:
@@ -89,83 +91,88 @@ services:
     # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
     # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
     - OTEL_SERVICE_NAME=otel-rust
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker, service.instance.id=otel-rust-docker,service.name=otel-rust, service.version=v1.0.0
     # command: "otel-rust"
 
 
-  # otel-go:
-  #   !!merge <<: *common
-  #   build: ./apps/otel-go/
-  #   container_name: otel-go
-  #   ports:
-  #   - "8888:8888"
-  #   environment:
-  #   - EXPOSE_PORT=8888
-  #   - TARGET_ONE_SVC=http://otel-rust:7770
-  #   - TARGET_TWO_SVC=http://otel-java:7750
-  #   # OpenTelemetry with GRPC
-  #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-  #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-  #   # OpenTelemetry with HTTP
-  #   # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-  #   # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
-  #   - OTEL_SERVICE_NAME=otel-go
-  #   # command: "otel-go"
+  otel-go:
+    !!merge <<: *common
+    build: ./apps/otel-go/
+    container_name: otel-go
+    ports:
+    - "8888:8888"
+    environment:
+    - EXPOSE_PORT=8888
+    - TARGET_ONE_SVC=http://otel-rust:7770
+    - TARGET_TWO_SVC=http://otel-java:7750
+    # OpenTelemetry with GRPC
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    # OpenTelemetry with HTTP
+    # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
+    - OTEL_SERVICE_NAME=otel-go
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker, service.instance.id=otel-go-docker,service.name=otel-go, service.version=v1.0.0
+    # command: "otel-go"
 
 
-  # otel-swift:
-  #   !!merge <<: *common
-  #   build: ./apps/otel-swift/
-  #   container_name: otel-swift
-  #   ports:
-  #   - "9191:9191"
-  #   environment:
-  #   - EXPOSE_PORT=9191
-  #   - TARGET_ONE_SVC=http://otel-rust:7770
-  #   - TARGET_TWO_SVC=http://otel-js:7700
-  #   # OpenTelemetry with GRPC
-  #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-  #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-  #   # OpenTelemetry with HTTP
-  #   # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-  #   # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
-  #   - OTEL_SERVICE_NAME=otel-swift
-  #   - LOG_LEVEL=debug
-  #   command: ["serve", "--env", "production", "--hostname", "0.0.0.0", "--port", "9191"]
+  otel-swift:
+    !!merge <<: *common
+    build: ./apps/otel-swift/
+    container_name: otel-swift
+    ports:
+    - "9191:9191"
+    environment:
+    - EXPOSE_PORT=9191
+    - TARGET_ONE_SVC=http://otel-rust:7770
+    - TARGET_TWO_SVC=http://otel-js:7700
+    # OpenTelemetry with GRPC
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    # OpenTelemetry with HTTP
+    # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
+    - OTEL_SERVICE_NAME=otel-swift
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker, service.instance.id=otel-swift-docker,service.name=otel-swift, service.version=v1.0.0
+    - LOG_LEVEL=debug
+    command: ["serve", "--env", "production", "--hostname", "0.0.0.0", "--port", "9191"]
 
-  # otel-ts:
-  #   !!merge <<: *common
-  #   build: ./apps/otel-ts/
-  #   container_name: otel-ts
-  #   ports:
-  #   - "3333:3333"
-  #   environment:
-  #   - EXPOSE_PORT=3333
-  #   - TARGET_ONE_SVC=http://otel-go:7760
-  #   - TARGET_TWO_SVC=http://otel-rust:7770
-  #   # OpenTelemetry with GRPC
-  #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-  #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-  #   # OpenTelemetry with HTTP
-  #   # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-  #   # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
-  #   - OTEL_SERVICE_NAME=otel-ts
-  #   command: "node --require '@opentelemetry/auto-instrumentations-node/register' dist/index.js"
+  otel-ts:
+    !!merge <<: *common
+    build: ./apps/otel-ts/
+    container_name: otel-ts
+    ports:
+    - "3333:3333"
+    environment:
+    - EXPOSE_PORT=3333
+    - TARGET_ONE_SVC=http://otel-go:7760
+    - TARGET_TWO_SVC=http://otel-rust:7770
+    # OpenTelemetry with GRPC
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    # OpenTelemetry with HTTP
+    # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
+    - OTEL_SERVICE_NAME=otel-ts
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker, service.instance.id=otel-ts-docker,service.name=otel-ts, service.version=v1.0.0
+    command: "node --require '@opentelemetry/auto-instrumentations-node/register' dist/index.js"
 
-  # otel-react:
-  #   !!merge <<: *common
-  #   build: ./apps/otel-react/
-  #   container_name: otel-react
-  #   ports:
-  #   - "3434:3434"
-  #   environment:
-  #   - PORT=3434
-  #   - TARGET_ONE_SVC=http://otel-js:7700
-  #   - TARGET_TWO_SVC=http://otel-java:7750
-  #   # OpenTelemetry with GRPC
-  #   - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-  #   - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-  #   # OpenTelemetry with HTTP
-  #   # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
-  #   # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
-  #   - OTEL_SERVICE_NAME=otel-react
-  #   command: ""
+  otel-react:
+    !!merge <<: *common
+    build: ./apps/otel-react/
+    container_name: otel-react
+    ports:
+    - "3434:3434"
+    environment:
+    - PORT=3434
+    - TARGET_ONE_SVC=http://otel-js:7700
+    - TARGET_TWO_SVC=http://otel-java:7750
+    # OpenTelemetry with GRPC
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    # OpenTelemetry with HTTP
+    # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    # - OTEL_EXPORTER_OTLP_PROTOCOL=http/json
+    - OTEL_SERVICE_NAME=otel-react
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker, service.instance.id=otel-python-react,service.name=otel-react, service.version=v1.0.0
+    command: ""
