@@ -12,6 +12,11 @@ on: # yamllint disable-line rule:truthy
 jobs:
   update_labels:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+
     steps:
     - name: Monitor Actions
       uses: GitHubSecurityLab/actions-permissions/monitor@v1
