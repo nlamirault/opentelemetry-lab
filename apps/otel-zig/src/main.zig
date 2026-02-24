@@ -1,13 +1,19 @@
 // SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 // SPDX-License-Identifier: Apache-2.0
 
+//! Entry point for the otel-zig HTTP server.
+//! Reads configuration from environment variables, starts a TCP listener,
+//! and dispatches incoming requests to route handlers.
+
 const std = @import("std");
 const constants = @import("constants.zig");
 
-// Import route handlers
-const root_handler = @import("routing/root.zig");
+const chain_handler = @import("routing/chain.zig");
 const health_handler = @import("routing/health.zig");
+const root_handler = @import("routing/root.zig");
 const version_handler = @import("routing/version.zig");
+
+const log = std.log.scoped(.otel_zig);
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -15,8 +21,8 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     // Get configuration from environment
-    const service_name = std.posix.getenv("OTEL_SERVICE_NAME") orelse constants.DEFAULT_SERVICE_NAME;
-    const port_str = std.posix.getenv("EXPOSE_PORT") orelse constants.DEFAULT_PORT;
+    const service_name = std.posix.getenv("OTEL_SERVICE_NAME") orelse constants.defaultServiceName;
+    const port_str = std.posix.getenv("EXPOSE_PORT") orelse constants.defaultPort;
     const port = try std.fmt.parseInt(u16, port_str, 10);
 
     // Setup server
@@ -26,18 +32,18 @@ pub fn main() !void {
     });
     defer server.deinit();
 
-    std.debug.print("\n", .{});
-    std.debug.print("==================================================\n", .{});
-    std.debug.print("OpenTelemetry Lab - Zig Application\n", .{});
-    std.debug.print("==================================================\n", .{});
-    std.debug.print("Server listening on: http://0.0.0.0:{d}\n", .{port});
-    std.debug.print("Service Name: {s}\n", .{service_name});
-    std.debug.print("Version: {s}\n", .{constants.VERSION});
-    std.debug.print("\nAvailable endpoints:\n", .{});
-    std.debug.print("  GET /        - Root endpoint\n", .{});
-    std.debug.print("  GET /health  - Health check\n", .{});
-    std.debug.print("  GET /version - Version information\n", .{});
-    std.debug.print("==================================================\n\n", .{});
+    log.info("==================================================", .{});
+    log.info("OpenTelemetry Lab - Zig Application", .{});
+    log.info("==================================================", .{});
+    log.info("Server listening on: http://0.0.0.0:{d}", .{port});
+    log.info("Service Name: {s}", .{service_name});
+    log.info("Version: {s}", .{constants.version});
+    log.info("Available endpoints:", .{});
+    log.info("  GET /        - Root endpoint", .{});
+    log.info("  GET /health  - Health check", .{});
+    log.info("  GET /version - Version information", .{});
+    log.info("  GET /chain   - Chain of operations", .{});
+    log.info("==================================================", .{});
 
     // Accept connections
     while (true) {
@@ -45,7 +51,7 @@ pub fn main() !void {
 
         // Handle connection in a new task (simplified, not truly async)
         handleConnection(allocator, connection) catch |err| {
-            std.debug.print("Error handling connection: {}\n", .{err});
+            log.err("connection error: {}", .{err});
         };
     }
 }
@@ -71,8 +77,7 @@ fn handleConnection(
     const method = parts.next() orelse return;
     const path = parts.next() orelse return;
 
-    // Log request
-    std.debug.print("→ {s} {s}\n", .{ method, path });
+    log.info("-> {s} {s}", .{ method, path });
 
     // Route handling
     const response_body = if (std.mem.eql(u8, path, "/"))
@@ -81,6 +86,8 @@ fn handleConnection(
         try health_handler.handler(allocator)
     else if (std.mem.eql(u8, path, "/version"))
         try version_handler.handler(allocator)
+    else if (std.mem.eql(u8, path, "/chain"))
+        try chain_handler.handler(allocator)
     else
         try std.fmt.allocPrint(allocator, "{{\"error\": \"Not Found\"}}\n", .{});
 
@@ -89,7 +96,8 @@ fn handleConnection(
     // Determine status and content type
     const status = if (std.mem.eql(u8, path, "/") or
         std.mem.eql(u8, path, "/health") or
-        std.mem.eql(u8, path, "/version"))
+        std.mem.eql(u8, path, "/version") or
+        std.mem.eql(u8, path, "/chain"))
         "200 OK"
     else
         "404 Not Found";
@@ -109,10 +117,18 @@ fn handleConnection(
 
     _ = try connection.stream.writeAll(response);
 
-    std.debug.print("← {s} {s}\n", .{ status, path });
+    log.info("<- {s} {s}", .{ status, path });
+}
+
+// Register tests from all routing modules so `zig build test` picks them up.
+test {
+    _ = @import("routing/root.zig");
+    _ = @import("routing/health.zig");
+    _ = @import("routing/version.zig");
+    _ = @import("routing/chain.zig");
 }
 
 test "constants" {
-    try std.testing.expectEqualStrings("1.0.0", constants.VERSION);
-    try std.testing.expectEqualStrings("otel-zig", constants.DEFAULT_SERVICE_NAME);
+    try std.testing.expectEqualStrings("1.0.0", constants.version);
+    try std.testing.expectEqualStrings("otel-zig", constants.defaultServiceName);
 }
