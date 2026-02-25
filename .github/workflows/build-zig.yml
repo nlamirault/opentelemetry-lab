@@ -32,12 +32,12 @@ jobs:
         with:
           version: ${{ matrix.zig-version }}
 
-      - name: 🔍 Check formatting
+      - name: ✅ Check formatting
         run: |
             cd apps/otel-zig
             zig fmt --check .
 
-      - name: ✅ Run tests
+      - name: ✅ Build application
         run: |
             cd apps/otel-zig
             zig build
@@ -47,7 +47,7 @@ jobs:
             cd apps/otel-zig
             zig test
 
-      - name: ✅ Build (ReleaseSafe)
+      - name: ✅ Build Release
         run: |
             cd apps/otel-zig
             zig build -Doptimize=ReleaseSafe
