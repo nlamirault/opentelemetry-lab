@@ -40,9 +40,14 @@ jobs:
       - name: ✅ Run tests
         run: |
             cd apps/otel-zig
-            zig build test
+            zig build
 
-      - name: 🔨 Build (ReleaseSafe)
+      - name: ✅ Run tests
+        run: |
+            cd apps/otel-zig
+            zig test
+
+      - name: ✅ Build (ReleaseSafe)
         run: |
             cd apps/otel-zig
             zig build -Doptimize=ReleaseSafe
