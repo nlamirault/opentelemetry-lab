@@ -94,8 +94,6 @@ pub fn main() !void {
         std.process.exit(1);
     };
 
-
-
     // -----------------------------------------------------------------------
     // Logs — LoggerProvider + BatchingLogRecordProcessor + StdoutExporter
     // -----------------------------------------------------------------------
