@@ -7,8 +7,11 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // Note: OpenTelemetry SDK integration is pending SDK stabilization
-    // For now, this demonstrates the application structure with placeholder telemetry
+    const otel_dep = b.dependency("opentelemetry", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const otel_mod = otel_dep.module("sdk");
 
     // Executable
     const exe = b.addExecutable(.{
@@ -19,6 +22,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         }),
     });
+    exe.root_module.addImport("opentelemetry-sdk", otel_mod);
 
     b.installArtifact(exe);
 
@@ -41,6 +45,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         }),
     });
+    exe_unit_tests.root_module.addImport("opentelemetry-sdk", otel_mod);
 
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
 

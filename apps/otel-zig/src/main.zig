@@ -3,15 +3,64 @@
 
 //! Entry point for the otel-zig HTTP server.
 //! Reads configuration from environment variables, starts a TCP listener,
-//! and dispatches incoming requests to route handlers.
+//! and dispatches incoming HTTP requests to route handlers.
+//!
+//! OpenTelemetry signals:
+//!   - Logs: custom std.log bridge forwards to an OTel LoggerProvider (stdout exporter)
+//!   - Traces: each request produces a server span (stdout exporter)
+//!   - Metrics: request count and latency recorded; exported every 15 s (stdout exporter)
 
 const std = @import("std");
+const sdk = @import("opentelemetry-sdk");
 const constants = @import("constants.zig");
 
 const chain_handler = @import("routing/chain.zig");
 const health_handler = @import("routing/health.zig");
 const root_handler = @import("routing/root.zig");
 const version_handler = @import("routing/version.zig");
+
+// ---------------------------------------------------------------------------
+// std.log bridge — forwards all log calls to OTel AND mirrors to stderr.
+//
+// Because the sdk.logs.Logger type is not re-exported from the SDK module,
+// we use a minimal vtable to hold the type-erased emit function.
+// ---------------------------------------------------------------------------
+
+const LogBridge = struct {
+    emit_fn: *const fn (ctx: *anyopaque, sev: u8, sev_text: []const u8, body: []const u8) void,
+    ctx: *anyopaque,
+};
+
+/// Set once in main() before the server starts; read concurrently from logFn.
+var g_log_bridge: ?LogBridge = null;
+
+pub const std_options: std.Options = .{ .logFn = otelLogFn };
+
+fn otelLogFn(
+    comptime level: std.log.Level,
+    comptime scope: @TypeOf(.enum_literal),
+    comptime format: []const u8,
+    args: anytype,
+) void {
+    const level_txt = comptime level.asText();
+    const scope_txt = "(" ++ @tagName(scope) ++ ") ";
+
+    // Mirror to stderr so the server is observable without a running collector.
+    std.debug.print(level_txt ++ ": " ++ scope_txt ++ format ++ "\n", args);
+
+    // Forward to the OTel LoggerProvider when configured.
+    if (g_log_bridge) |bridge| {
+        var msg_buf: [4096]u8 = undefined;
+        const msg = std.fmt.bufPrint(&msg_buf, format, args) catch msg_buf[0..];
+        const sev: u8 = switch (level) {
+            .err => 17,
+            .warn => 13,
+            .info => 9,
+            .debug => 5,
+        };
+        bridge.emit_fn(bridge.ctx, sev, level_txt, msg);
+    }
+}
 
 const log = std.log.scoped(.otel_zig);
 
@@ -20,16 +69,120 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    // Get configuration from environment
     const service_name = std.posix.getenv("OTEL_SERVICE_NAME") orelse constants.defaultServiceName;
     const port_str = std.posix.getenv("EXPOSE_PORT") orelse constants.defaultPort;
     const port = try std.fmt.parseInt(u16, port_str, 10);
 
-    // Setup server
-    const address = std.net.Address.initIp4(.{ 0, 0, 0, 0 }, port);
-    var server = try address.listen(.{
-        .reuse_address = true,
+    // -----------------------------------------------------------------------
+    // Logs — LoggerProvider + BatchingLogRecordProcessor + StdoutExporter
+    // -----------------------------------------------------------------------
+    const LogWriterType = std.io.GenericWriter(std.fs.File, std.fs.File.WriteError, std.fs.File.write);
+    var log_exporter = sdk.logs.StdoutExporter.init(LogWriterType{ .context = std.fs.File.stdout() });
+    const log_record_exporter = log_exporter.asLogRecordExporter();
+
+    var batch_processor = try sdk.logs.BatchingLogRecordProcessor.init(
+        allocator,
+        log_record_exporter,
+        .{
+            .max_queue_size = 512,
+            .scheduled_delay_millis = 5_000,
+            .max_export_batch_size = 64,
+        },
+    );
+    defer {
+        const proc = batch_processor.asLogRecordProcessor();
+        proc.shutdown() catch {};
+        batch_processor.deinit();
+    }
+
+    const log_resource = try sdk.attributes.Attributes.from(allocator, .{
+        "service.name",    service_name,
+        "service.version", @as([]const u8, constants.version),
     });
+    defer if (log_resource) |r| allocator.free(r);
+
+    var log_provider = try sdk.logs.LoggerProvider.init(allocator, log_resource);
+    defer log_provider.deinit();
+    try log_provider.addLogRecordProcessor(batch_processor.asLogRecordProcessor());
+
+    // Wire std.log → LoggerProvider via the type-erased bridge.
+    const logger_scope = sdk.InstrumentationScope{ .name = service_name, .version = constants.version };
+    const otel_log = try log_provider.getLogger(logger_scope);
+    const LoggerEmitBridge = struct {
+        fn emitFn(ctx: *anyopaque, sev: u8, sev_text: []const u8, body: []const u8) void {
+            const logger = @as(@TypeOf(otel_log), @ptrCast(@alignCast(ctx)));
+            logger.emit(sev, sev_text, body, null);
+        }
+    };
+    g_log_bridge = LogBridge{
+        .emit_fn = LoggerEmitBridge.emitFn,
+        .ctx = otel_log,
+    };
+
+    // -----------------------------------------------------------------------
+    // Traces — TracerProvider + SimpleProcessor + StdOutExporter
+    // -----------------------------------------------------------------------
+    var prng = std.Random.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
+    const id_generator = sdk.trace.IDGenerator{
+        .Random = sdk.trace.RandomIDGenerator.init(prng.random()),
+    };
+
+    var tracer_provider = try sdk.trace.TracerProvider.init(allocator, id_generator);
+    defer tracer_provider.shutdown();
+
+    var trace_stdout_buffer: [4096]u8 = undefined;
+    var trace_exporter = sdk.trace.StdOutExporter.init(std.fs.File.stdout().writer(&trace_stdout_buffer));
+    var trace_processor = sdk.trace.SimpleProcessor.init(allocator, trace_exporter.asSpanExporter());
+    try tracer_provider.addSpanProcessor(trace_processor.asSpanProcessor());
+
+    const tracer = try tracer_provider.getTracer(.{
+        .name = service_name,
+        .version = constants.version,
+    });
+
+    // -----------------------------------------------------------------------
+    // Metrics — MeterProvider + MetricReader + StdoutExporter
+    // A background thread calls collect() every 15 s so output is visible.
+    // -----------------------------------------------------------------------
+    const mp = try sdk.metrics.MeterProvider.default();
+    defer mp.shutdown();
+
+    const me = try sdk.metrics.MetricExporter.Stdout(allocator, null, null);
+    defer me.stdout.deinit();
+
+    const mr = try sdk.metrics.MetricReader.init(allocator, me.exporter);
+    defer mr.shutdown();
+    try mp.addReader(mr);
+
+    const meter = try mp.getMeter(.{ .name = service_name });
+
+    const request_counter = try meter.createCounter(u64, .{
+        .name = "http.server.requests",
+        .description = "Total number of HTTP requests received",
+    });
+    const request_duration = try meter.createHistogram(f64, .{
+        .name = "http.server.request_duration_ms",
+        .description = "Duration of HTTP requests in milliseconds",
+        .unit = "ms",
+    });
+
+    // Detached daemon thread: export metrics every 15 seconds.
+    const MetricsCollector = struct {
+        fn run(reader: *sdk.metrics.MetricReader) void {
+            while (true) {
+                std.Thread.sleep(15 * std.time.ns_per_s);
+                reader.collect() catch {};
+            }
+        }
+    };
+    const metrics_thread = try std.Thread.spawn(.{}, MetricsCollector.run, .{mr});
+    metrics_thread.detach();
+
+    // -----------------------------------------------------------------------
+    // HTTP server
+    // -----------------------------------------------------------------------
+    const address = std.net.Address.initIp4(.{ 0, 0, 0, 0 }, port);
+    var server = try address.listen(.{ .reuse_address = true });
     defer server.deinit();
 
     log.info("==================================================", .{});
@@ -45,12 +198,9 @@ pub fn main() !void {
     log.info("  GET /chain   - Chain of operations", .{});
     log.info("==================================================", .{});
 
-    // Accept connections
     while (true) {
         const connection = try server.accept();
-
-        // Handle connection in a new task (simplified, not truly async)
-        handleConnection(allocator, connection) catch |err| {
+        handleConnection(allocator, connection, tracer, request_counter, request_duration) catch |err| {
             log.err("connection error: {}", .{err});
         };
     }
@@ -59,17 +209,19 @@ pub fn main() !void {
 fn handleConnection(
     allocator: std.mem.Allocator,
     connection: std.net.Server.Connection,
+    tracer: anytype,
+    request_counter: *sdk.metrics.Counter(u64),
+    request_duration: *sdk.metrics.Histogram(f64),
 ) !void {
     defer connection.stream.close();
 
+    const start = std.time.milliTimestamp();
+
     var read_buffer: [8192]u8 = undefined;
     const bytes_read = try connection.stream.read(&read_buffer);
-
     if (bytes_read == 0) return;
 
     const request_str = read_buffer[0..bytes_read];
-
-    // Parse the HTTP request line
     var lines = std.mem.splitScalar(u8, request_str, '\n');
     const request_line = lines.next() orelse return;
 
@@ -78,6 +230,19 @@ fn handleConnection(
     const path = parts.next() orelse return;
 
     log.info("-> {s} {s}", .{ method, path });
+
+    // Start a server span covering the full request lifetime.
+    const span_attrs = try sdk.Attributes.from(allocator, .{
+        "http.request.method", method,
+        "url.path",            path,
+    });
+    defer if (span_attrs) |a| allocator.free(a);
+
+    var span = try tracer.startSpan(allocator, path, .{
+        .kind = .Server,
+        .attributes = span_attrs,
+    });
+    defer span.deinit();
 
     // Route handling
     const response_body = if (std.mem.eql(u8, path, "/"))
@@ -93,21 +258,33 @@ fn handleConnection(
 
     defer allocator.free(response_body);
 
-    // Determine status and content type
-    const status = if (std.mem.eql(u8, path, "/") or
+    const is_known_route =
+        std.mem.eql(u8, path, "/") or
         std.mem.eql(u8, path, "/health") or
         std.mem.eql(u8, path, "/version") or
-        std.mem.eql(u8, path, "/chain"))
-        "200 OK"
-    else
-        "404 Not Found";
+        std.mem.eql(u8, path, "/chain");
 
-    const content_type = if (std.mem.eql(u8, path, "/"))
-        "text/plain"
-    else
-        "application/json";
+    const status_code: i64 = if (is_known_route) 200 else 404;
+    const status = if (is_known_route) "200 OK" else "404 Not Found";
+    const content_type = if (std.mem.eql(u8, path, "/")) "text/plain" else "application/json";
 
-    // Build and send HTTP response
+    // Record metrics (failures are non-fatal for the request).
+    request_counter.add(1, .{
+        "http.request.method",       method,
+        "url.path",                  path,
+        "http.response.status_code", status_code,
+    }) catch |err| log.warn("counter add failed: {}", .{err});
+
+    const elapsed: f64 = @floatFromInt(std.time.milliTimestamp() - start);
+    request_duration.record(elapsed, .{ "url.path", path }) catch |err|
+        log.warn("histogram record failed: {}", .{err});
+
+    // Annotate span with response status and close it.
+    span.setAttribute("http.response.status_code", .{ .int = status_code }) catch {};
+    span.setStatus(sdk.api.trace.Status.ok());
+    span.end(null);
+
+    // Build and send HTTP response.
     const response = try std.fmt.allocPrint(
         allocator,
         "HTTP/1.1 {s}\r\nContent-Type: {s}\r\nContent-Length: {d}\r\nConnection: close\r\n\r\n{s}",
