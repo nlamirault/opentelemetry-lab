@@ -20,7 +20,9 @@ const root_handler = @import("routing/root.zig");
 const version_handler = @import("routing/version.zig");
 
 // ---------------------------------------------------------------------------
-// std.log bridge — forwards all log calls to OTel AND mirrors to stderr.
+// std.log bridge — forwards all log calls to OTel AND mirrors to stderr via
+// std.debug.print (active in debug builds; may be suppressed in release builds
+// depending on the optimization level).
 //
 // Because the sdk.logs.Logger type is not re-exported from the SDK module,
 // we use a minimal vtable to hold the type-erased emit function.
@@ -31,8 +33,15 @@ const LogBridge = struct {
     ctx: *anyopaque,
 };
 
-/// Set once in main() before the server starts; read concurrently from logFn.
+/// Written exactly once in main() before server.accept() is called; subsequently
+/// read from otelLogFn on any thread. No synchronization is needed because the
+/// single write completes (and std.Thread.spawn creates a memory barrier) before
+/// any concurrent reader can observe the value. If connection handling is ever
+/// moved to worker threads, this assumption must be re-evaluated.
 var g_log_bridge: ?LogBridge = null;
+
+/// Controls the background metrics-collector thread. Set to true before joining.
+var g_metrics_stop = std.atomic.Value(bool).init(false);
 
 pub const std_options: std.Options = .{ .logFn = otelLogFn };
 
@@ -45,19 +54,25 @@ fn otelLogFn(
     const level_txt = comptime level.asText();
     const scope_txt = "(" ++ @tagName(scope) ++ ") ";
 
-    // Mirror to stderr so the server is observable without a running collector.
+    // Mirror to stderr via std.debug.print. Active in debug builds; may be
+    // suppressed in release builds depending on optimization flags.
     std.debug.print(level_txt ++ ": " ++ scope_txt ++ format ++ "\n", args);
 
     // Forward to the OTel LoggerProvider when configured.
     if (g_log_bridge) |bridge| {
         var msg_buf: [4096]u8 = undefined;
         const msg = std.fmt.bufPrint(&msg_buf, format, args) catch msg_buf[0..];
+        // OTel Log Data Model severity numbers (spec §4.1):
+        //   DEBUG=5, INFO=9, WARN=13, ERROR=17
         const sev: u8 = switch (level) {
             .err => 17,
             .warn => 13,
             .info => 9,
             .debug => 5,
         };
+        // NOTE: logger.emit returns void; errors inside the SDK emit path
+        // cannot be surfaced here. Calling log.* inside this function would
+        // cause infinite recursion.
         bridge.emit_fn(bridge.ctx, sev, level_txt, msg);
     }
 }
@@ -71,7 +86,13 @@ pub fn main() !void {
 
     const service_name = std.posix.getenv("OTEL_SERVICE_NAME") orelse constants.defaultServiceName;
     const port_str = std.posix.getenv("EXPOSE_PORT") orelse constants.defaultPort;
-    const port = try std.fmt.parseInt(u16, port_str, 10);
+    const port = std.fmt.parseInt(u16, port_str, 10) catch |err| {
+        std.debug.print(
+            "ERROR: EXPOSE_PORT='{s}' is not a valid port number (1-65535): {}\n",
+            .{ port_str, err },
+        );
+        std.process.exit(1);
+    };
 
     // -----------------------------------------------------------------------
     // Logs — LoggerProvider + BatchingLogRecordProcessor + StdoutExporter
@@ -91,7 +112,11 @@ pub fn main() !void {
     );
     defer {
         const proc = batch_processor.asLogRecordProcessor();
-        proc.shutdown() catch {};
+        // Use std.debug.print here: the log bridge may already be torn down
+        // at this point, and shutdown() flushes the final in-flight log records.
+        proc.shutdown() catch |err| {
+            std.debug.print("ERROR: log processor shutdown failed, logs may be lost: {}\n", .{err});
+        };
         batch_processor.deinit();
     }
 
@@ -122,7 +147,10 @@ pub fn main() !void {
     // -----------------------------------------------------------------------
     // Traces — TracerProvider + SimpleProcessor + StdOutExporter
     // -----------------------------------------------------------------------
-    var prng = std.Random.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
+    // Use system entropy for the PRNG seed to avoid predictable IDs.
+    var seed: u64 = undefined;
+    std.crypto.random.bytes(std.mem.asBytes(&seed));
+    var prng = std.Random.DefaultPrng.init(seed);
     const id_generator = sdk.trace.IDGenerator{
         .Random = sdk.trace.RandomIDGenerator.init(prng.random()),
     };
@@ -166,17 +194,27 @@ pub fn main() !void {
         .unit = "ms",
     });
 
-    // Detached daemon thread: export metrics every 15 seconds.
+    // Background thread: export metrics every 15 s.
+    // The defer below signals the stop flag and joins the thread before
+    // mr.shutdown() / mp.shutdown() run (defers execute in LIFO order),
+    // preventing a use-after-free on the MetricReader. Shutdown may block
+    // up to 15 s waiting for the current sleep interval to complete.
     const MetricsCollector = struct {
         fn run(reader: *sdk.metrics.MetricReader) void {
-            while (true) {
+            while (!g_metrics_stop.load(.acquire)) {
                 std.Thread.sleep(15 * std.time.ns_per_s);
-                reader.collect() catch {};
+                if (g_metrics_stop.load(.acquire)) break;
+                reader.collect() catch |err| {
+                    std.log.err("metrics collect failed: {}", .{err});
+                };
             }
         }
     };
     const metrics_thread = try std.Thread.spawn(.{}, MetricsCollector.run, .{mr});
-    metrics_thread.detach();
+    defer {
+        g_metrics_stop.store(true, .release);
+        metrics_thread.join();
+    }
 
     // -----------------------------------------------------------------------
     // HTTP server
@@ -206,6 +244,11 @@ pub fn main() !void {
     }
 }
 
+// Processes one HTTP request from `connection`.
+// NOTE: The request is read in a single call; payloads exceeding 8 192 bytes
+// will be truncated. This is intentional for this demo and not production-safe.
+// NOTE: Per OTel semantic conventions, span status reflects server-side errors
+// (5xx) only; 4xx client errors are recorded with Status.ok().
 fn handleConnection(
     allocator: std.mem.Allocator,
     connection: std.net.Server.Connection,
@@ -219,15 +262,29 @@ fn handleConnection(
 
     var read_buffer: [8192]u8 = undefined;
     const bytes_read = try connection.stream.read(&read_buffer);
-    if (bytes_read == 0) return;
+    if (bytes_read == 0) {
+        log.debug("connection closed before sending data", .{});
+        return;
+    }
 
     const request_str = read_buffer[0..bytes_read];
     var lines = std.mem.splitScalar(u8, request_str, '\n');
-    const request_line = lines.next() orelse return;
+    const raw_request_line = lines.next() orelse {
+        log.warn("malformed request: no request line", .{});
+        return;
+    };
+    // HTTP lines end with \r\n; trim the trailing \r for robust parsing.
+    const request_line = std.mem.trimRight(u8, raw_request_line, "\r");
 
     var parts = std.mem.splitScalar(u8, request_line, ' ');
-    const method = parts.next() orelse return;
-    const path = parts.next() orelse return;
+    const method = parts.next() orelse {
+        log.warn("malformed request line (no method): '{s}'", .{request_line});
+        return;
+    };
+    const path = parts.next() orelse {
+        log.warn("malformed request line (no path): '{s}'", .{request_line});
+        return;
+    };
 
     log.info("-> {s} {s}", .{ method, path });
 
@@ -244,28 +301,40 @@ fn handleConnection(
     });
     defer span.deinit();
 
-    // Route handling
-    const response_body = if (std.mem.eql(u8, path, "/"))
-        try root_handler.handler(allocator)
-    else if (std.mem.eql(u8, path, "/health"))
-        try health_handler.handler(allocator)
-    else if (std.mem.eql(u8, path, "/version"))
-        try version_handler.handler(allocator)
-    else if (std.mem.eql(u8, path, "/chain"))
-        try chain_handler.handler(allocator)
-    else
-        try std.fmt.allocPrint(allocator, "{{\"error\": \"Not Found\"}}\n", .{});
-
-    defer allocator.free(response_body);
-
     const is_known_route =
         std.mem.eql(u8, path, "/") or
         std.mem.eql(u8, path, "/health") or
         std.mem.eql(u8, path, "/version") or
         std.mem.eql(u8, path, "/chain");
 
-    const status_code: i64 = if (is_known_route) 200 else 404;
-    const status = if (is_known_route) "200 OK" else "404 Not Found";
+    // Route handling — errors are caught here so we can write an HTTP 500
+    // response rather than closing the connection silently.
+    var handler_err = false;
+    const maybe_body: anyerror![]const u8 = if (std.mem.eql(u8, path, "/"))
+        root_handler.handler(allocator)
+    else if (std.mem.eql(u8, path, "/health"))
+        health_handler.handler(allocator)
+    else if (std.mem.eql(u8, path, "/version"))
+        version_handler.handler(allocator)
+    else if (std.mem.eql(u8, path, "/chain"))
+        chain_handler.handler(allocator)
+    else
+        std.fmt.allocPrint(allocator, "{{\"error\": \"Not Found\"}}\n", .{});
+
+    const response_body = maybe_body catch |err| blk: {
+        log.err("handler error for {s}: {}", .{ path, err });
+        handler_err = true;
+        break :blk try std.fmt.allocPrint(allocator, "{{\"error\": \"Internal Server Error\"}}\n", .{});
+    };
+    defer allocator.free(response_body);
+
+    const status_code: i64 = if (handler_err) 500 else if (is_known_route) 200 else 404;
+    const status = if (handler_err)
+        "500 Internal Server Error"
+    else if (is_known_route)
+        "200 OK"
+    else
+        "404 Not Found";
     const content_type = if (std.mem.eql(u8, path, "/")) "text/plain" else "application/json";
 
     // Record metrics (failures are non-fatal for the request).
@@ -280,8 +349,13 @@ fn handleConnection(
         log.warn("histogram record failed: {}", .{err});
 
     // Annotate span with response status and close it.
-    span.setAttribute("http.response.status_code", .{ .int = status_code }) catch {};
-    span.setStatus(sdk.api.trace.Status.ok());
+    // Per OTel semantic conventions, span status is set to error only for 5xx.
+    span.setAttribute("http.response.status_code", .{ .int = status_code }) catch |err|
+        log.warn("failed to set span attribute http.response.status_code: {}", .{err});
+    span.setStatus(if (handler_err)
+        sdk.api.trace.Status.error_with_description("Internal Server Error")
+    else
+        sdk.api.trace.Status.ok());
     span.end(null);
 
     // Build and send HTTP response.
@@ -292,7 +366,7 @@ fn handleConnection(
     );
     defer allocator.free(response);
 
-    _ = try connection.stream.writeAll(response);
+    try connection.stream.writeAll(response);
 
     log.info("<- {s} {s}", .{ status, path });
 }

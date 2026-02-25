@@ -20,7 +20,7 @@ pub fn handler(allocator: std.mem.Allocator) ![]const u8 {
     return response;
 }
 
-test "version handler returns semver string" {
+test "version handler returns version from constants" {
     const body = try handler(std.testing.allocator);
     defer std.testing.allocator.free(body);
     try std.testing.expectEqualStrings("{\"version\": \"1.0.0\"}\n", body);

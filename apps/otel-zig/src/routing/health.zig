@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Route handler for the health check endpoint (GET /health).
+//! Always returns ok; no dependency checks are performed.
 
 const std = @import("std");
 
-/// Handles GET /health and returns a JSON body indicating service liveness.
+/// Handles GET /health and returns a JSON liveness check body.
+/// Always returns `{"status": "ok"}`; no dependency checks are performed.
 /// Caller owns the returned slice and must free it with `allocator`.
 pub fn handler(allocator: std.mem.Allocator) ![]const u8 {
     const response = try std.fmt.allocPrint(
