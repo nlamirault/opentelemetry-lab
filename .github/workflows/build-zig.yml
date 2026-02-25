@@ -28,7 +28,7 @@ jobs:
           fetch-depth: 0
 
       - name: 🎉 Setup Zig
-        uses: mlugg/setup-zig@a28969a1e4f8096b9f3b2bf5d5e14b3cf8f16b52 # v2.0.1
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
           version: ${{ matrix.zig-version }}
 
