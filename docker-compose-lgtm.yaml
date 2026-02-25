@@ -14,7 +14,7 @@ x-common: &common
 services:
   otel-collector:
     <<: *common
-    image: otel/opentelemetry-collector-contrib:0.135.0
+    image: otel/opentelemetry-collector-contrib:0.146.0
     container_name: otel
     command:
     - "--config=/conf/config.yaml"
@@ -50,7 +50,7 @@ services:
 
   loki:
     <<: *common
-    image: grafana/loki:3.5.5
+    image: grafana/loki:3.6.7
     container_name: loki
     entrypoint: /usr/bin/loki
     command: ["-config.file=/etc/loki/config.yaml"]
@@ -62,7 +62,7 @@ services:
 
   tempo:
     <<: *common
-    image: grafana/tempo:2.8.2
+    image: grafana/tempo:2.10.1
     container_name: tempo
     command: ["-config.file=/etc/tempo/config.yaml"]
     volumes:
@@ -74,7 +74,7 @@ services:
 
   pyroscope:
     <<: *common
-    image: grafana/pyroscope:1.14.1
+    image: grafana/pyroscope:1.18.1
     container_name: pyroscope
     command: ["-config.file=/etc/pyroscope/config.yaml"]
     volumes:
@@ -85,7 +85,7 @@ services:
 
   prometheus:
     <<: *common
-    image: prom/prometheus:v3.5.0
+    image: prom/prometheus:v3.9.1
     container_name: prometheus
     volumes:
     - ./etc/prometheus/prometheus.yml:/workspace/prometheus.yml
@@ -97,7 +97,7 @@ services:
 
   grafana:
     <<: *common
-    image: grafana/grafana:12.1.0
+    image: grafana/grafana:12.4.0
     container_name: grafana
     volumes:
     - ./etc/grafana/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
