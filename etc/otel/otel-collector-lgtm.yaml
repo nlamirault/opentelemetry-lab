@@ -86,6 +86,9 @@ processors:
     detectors: [env, system]
     timeout: 2s
     override: true
+  deltatocumulative:
+    max_stale: 5m
+    max_streams: 100000
   transform/otel:
     metric_statements:
       - context: resource
@@ -134,6 +137,7 @@ service:
       - prometheus/collector
       processors:
       - resourcedetection
+      - deltatocumulative
       - transform/otel
       - batch
       exporters:

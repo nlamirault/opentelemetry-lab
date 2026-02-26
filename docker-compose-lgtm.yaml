@@ -29,8 +29,8 @@ services:
     environment:
     - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://loki:3100/otlp
     - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://prometheus:9090/api/v1/otlp
-    - OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT=http://pyroscope:4040
-    - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://tempo:4418
+    - OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT=http://pyroscope:9097
+    - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://tempo:4318
 
   # alloy:
   #   image: grafana/alloy:v1.4.0
