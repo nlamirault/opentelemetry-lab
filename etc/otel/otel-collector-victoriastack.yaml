@@ -1,0 +1,57 @@
+---
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: "0.0.0.0:4318"
+        cors:
+          allowed_origins:
+            - "http://*"
+            - "https://*"
+
+exporters:
+  otlphttp/victoriametrics:
+    endpoint: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT}
+    tls:
+      insecure: true
+  otlphttp/victorialogs:
+    logs_endpoint: ${OTEL_EXPORTER_OTLP_LOGS_ENDPOINT}
+    tls:
+      insecure: true
+  otlphttp/victoriatraces:
+    traces_endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT}
+    tls:
+      insecure: true
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+    path: "/ready"
+  pprof:
+    endpoint: 0.0.0.0:1777
+
+service:
+  telemetry:
+    logs:
+      encoding: json
+    # metrics:
+    #   address: 0.0.0.0:8888
+  extensions:
+    - health_check
+    - pprof
+  pipelines:
+    traces:
+      receivers:
+      - otlp
+      exporters:
+      - otlphttp/victoriatraces
+    metrics:
+      receivers:
+      - otlp
+      exporters:
+      - otlphttp/victoriametrics
+    logs:
+      receivers:
+      - otlp
+      exporters:
+      - otlphttp/victorialogs

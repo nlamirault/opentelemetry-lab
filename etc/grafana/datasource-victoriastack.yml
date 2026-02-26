@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# config file version
+apiVersion: 1
+
+datasources:
+- uid: victoriametrics
+  orgId: 1
+  name: VictoriaMetrics
+  type: victoriametrics-metrics-datasource
+  access: proxy
+  url: http://victoriametrics:8428
+- uid: victorialogs
+  name: VictoriaLogs
+  type: victoriametrics-logs-datasource
+  url: http://victorialogs:9428
+  access: proxy
+- uid: victoriatraces
+  name: VictoriaTraces
+  type: jaeger
+  typeName: Tempo
+  access: proxy
+  url: http://victoriatraces:10428/select/jaeger
