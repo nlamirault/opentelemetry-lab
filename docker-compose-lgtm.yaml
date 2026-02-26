@@ -24,7 +24,8 @@ services:
     ports:
     - "4317:4317" # OTLP gRPC receiver
     - "4318:4318" # OTLP http receiver
-    - "8889:8889" # Prometheus metrics exporter
+    - "8888:8888"
+    - "8889:8889"
     environment:
     - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://loki:3100/otlp
     - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://prometheus:9090/api/v1/otlp
@@ -100,9 +101,9 @@ services:
     image: grafana/grafana:12.4.0
     container_name: grafana
     volumes:
-    - ./etc/grafana/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
-    - ./etc/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
-    - ./etc/grafana/dashboards:/var/lib/grafana/dashboards
+    - ./etc/grafana/dashboards-lgtm.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
+    - ./etc/grafana/datasource-lgtm.yml:/etc/grafana/provisioning/datasources/datasource.yml
+    - ./etc/grafana/dashboards/lgtm:/var/lib/grafana/dashboards
     environment:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
