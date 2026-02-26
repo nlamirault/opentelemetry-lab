@@ -21,6 +21,7 @@ services:
     ports:
     - "4317:4317" # OTLP gRPC receiver
     - "4318:4318" # OTLP http receiver
+    - "8888:8888" # Prometheus metrics exporter
     - "8889:8889" # Prometheus metrics exporter
     environment:
     - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://victorialogs:9428/insert/opentelemetry/v1/logs
@@ -66,9 +67,9 @@ services:
     - "3000:3000"
     volumes:
     # - "grdata:/var/lib/grafana"
-    - ./etc/grafana/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
+    - ./etc/grafana/dashboards-victoriastack.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
     - ./etc/grafana/datasource-victoriastack.yml:/etc/grafana/provisioning/datasources/datasource.yml
-    - ./etc/grafana/dashboards:/var/lib/grafana/dashboards
+    - ./etc/grafana/dashboards/victoriastack:/var/lib/grafana/dashboards
     environment:
     - GF_AUTH_ANONYMOUS_ENABLED=true
     - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
