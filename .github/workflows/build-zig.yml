@@ -1,0 +1,53 @@
+---
+name: Build / Zig
+
+on:
+  pull_request:
+    paths:
+      - apps/otel-zig/*.zig
+      - apps/otel-zig/build.zig
+      - apps/otel-zig/build.zig.zon
+  workflow_dispatch:  # Allow manual triggering
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        zig-version: ['0.15.2']
+
+    name: Zig ${{ matrix.zig-version }}
+
+    steps:
+      - name: 🚚 Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: 🎉 Setup Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: ${{ matrix.zig-version }}
+
+      - name: ✅ Check formatting
+        run: |
+            cd apps/otel-zig
+            zig fmt --check .
+
+      - name: ✅ Build application
+        run: |
+            cd apps/otel-zig
+            zig build
+
+      - name: ✅ Run tests
+        run: |
+            cd apps/otel-zig
+            zig test
+
+      - name: ✅ Build Release
+        run: |
+            cd apps/otel-zig
+            zig build -Doptimize=ReleaseSafe
