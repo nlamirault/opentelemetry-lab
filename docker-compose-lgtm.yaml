@@ -14,7 +14,7 @@ x-common: &common
 services:
   otel-collector:
     <<: *common
-    image: otel/opentelemetry-collector-contrib:0.146.0
+    image: otel/opentelemetry-collector-contrib:0.147.0
     container_name: otel
     command:
     - "--config=/conf/config.yaml"

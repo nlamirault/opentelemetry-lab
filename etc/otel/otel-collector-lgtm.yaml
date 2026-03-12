@@ -45,11 +45,11 @@ exporters:
   debug/logs:
     verbosity: detailed
 
-  otlphttp/logs:
+  otlp_http/logs:
     endpoint: ${OTEL_EXPORTER_OTLP_LOGS_ENDPOINT}
     tls:
       insecure: true
-  otlphttp/metrics:
+  otlp_http/metrics:
     endpoint: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT}
     tls:
       insecure: true
@@ -57,7 +57,7 @@ exporters:
   #   endpoint: ${OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT}
   #   tls:
   #     insecure: true
-  otlphttp/traces:
+  otlp_http/traces:
     endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT}
     tls:
       insecure: true
@@ -134,7 +134,7 @@ service:
       - batch
       exporters:
       - debug/logs
-      - otlphttp/logs
+      - otlp_http/logs
     metrics:
       receivers:
       - otlp
@@ -146,7 +146,7 @@ service:
       - batch
       exporters:
       - debug/metrics
-      - otlphttp/metrics
+      - otlp_http/metrics
     # profiles:
     #   receivers:
     #   - otlp
@@ -161,7 +161,7 @@ service:
       - batch
       exporters:
       - debug/traces
-      - otlphttp/traces
+      - otlp_http/traces
     # metrics/spanmetrics:
     #   receivers: [spanmetrics]
     #   exporters: [prometheus]
