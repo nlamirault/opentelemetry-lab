@@ -57,11 +57,14 @@ processors:
     check_interval: 2s
     limit_mib: 1800
     spike_limit_mib: 500
-  attributes:
-    actions:
-    - key: instance
-      action: insert
-      value: opentelemetry-lab
+  resource:
+    attributes:
+      - key: service.instance.id
+        from_attribute: container.id
+        action: insert
+      - key: deployment.environment
+        value: opentelemetry-lab
+        action: upsert
   resourcedetection:
     detectors: [env, system]
     timeout: 2s
@@ -127,8 +130,9 @@ service:
       - otlp
       - tcplog/docker
       processors:
+      - resourcedetection
+      - resource
       - batch
-      - attributes
       exporters:
       # - debug/logs
       - clickhouselogsexporter
@@ -139,6 +143,7 @@ service:
       - prometheus/collector
       processors:
       - resourcedetection
+      - resource
       - batch
       exporters:
       # - debug/metrics
@@ -153,6 +158,8 @@ service:
       receivers:
       - otlp
       processors:
+      - resourcedetection
+      - resource
       - signozspanmetrics/prometheus
       - batch
       exporters:

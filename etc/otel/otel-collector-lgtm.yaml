@@ -89,12 +89,14 @@ processors:
   deltatocumulative:
     max_stale: 5m
     max_streams: 100000
-  transform/otel:
-    metric_statements:
-      - context: resource
-        statements:
-          - set(attributes["service.instance.id"], attributes["container.id"]) where attributes["container.id"] != nil
-          - set(attributes["service.instance.id"], attributes["host.name"]) where attributes["container.id"] == nil
+  resource:
+    attributes:
+      - key: service.instance.id
+        from_attribute: container.id
+        action: insert
+      - key: deployment.environment
+        value: opentelemetry-lab
+        action: upsert
 
 connectors:
   spanmetrics:
@@ -127,6 +129,8 @@ service:
       - otlp
       - tcplog/docker
       processors:
+      - resourcedetection
+      - resource
       - batch
       exporters:
       - debug/logs
@@ -137,8 +141,8 @@ service:
       - prometheus/collector
       processors:
       - resourcedetection
+      - resource
       - deltatocumulative
-      - transform/otel
       - batch
       exporters:
       - debug/metrics
@@ -152,6 +156,8 @@ service:
       receivers:
       - otlp
       processors:
+      - resourcedetection
+      - resource
       - batch
       exporters:
       - debug/traces

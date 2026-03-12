@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
 ---
 receivers:
   otlp:
@@ -64,6 +67,14 @@ processors:
   resourcedetection:
     detectors: [env, system]
     timeout: 2s
+  resource:
+    attributes:
+      - key: service.instance.id
+        from_attribute: container.id
+        action: insert
+      - key: deployment.environment
+        value: opentelemetry-lab
+        action: upsert
 
 service:
   telemetry:
@@ -87,8 +98,9 @@ service:
       receivers:
       - otlp
       processors:
+      - resourcedetection
+      - resource
       - batch
-      - attributes
       exporters:
       - debug/logs
       - otlphttp/victorialogs
@@ -98,6 +110,7 @@ service:
       - prometheus/collector
       processors:
       - resourcedetection
+      - resource
       - batch
       exporters:
       - debug/metrics
@@ -106,8 +119,9 @@ service:
       receivers:
       - otlp
       processors:
+      - resourcedetection
+      - resource
       - batch
-      - attributes
       exporters:
       - debug/traces
       - otlphttp/victoriatraces
