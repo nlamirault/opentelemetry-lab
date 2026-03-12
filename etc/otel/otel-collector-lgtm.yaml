@@ -45,11 +45,11 @@ exporters:
   debug/logs:
     verbosity: detailed
 
-  otlphttp/logs:
+  otlp_http/logs:
     endpoint: ${OTEL_EXPORTER_OTLP_LOGS_ENDPOINT}
     tls:
       insecure: true
-  otlphttp/metrics:
+  otlp_http/metrics:
     endpoint: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT}
     tls:
       insecure: true
@@ -57,7 +57,7 @@ exporters:
   #   endpoint: ${OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT}
   #   tls:
   #     insecure: true
-  otlphttp/traces:
+  otlp_http/traces:
     endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT}
     tls:
       insecure: true
@@ -89,12 +89,14 @@ processors:
   deltatocumulative:
     max_stale: 5m
     max_streams: 100000
-  transform/otel:
-    metric_statements:
-      - context: resource
-        statements:
-          - set(attributes["service.instance.id"], attributes["container.id"]) where attributes["container.id"] != nil
-          - set(attributes["service.instance.id"], attributes["host.name"]) where attributes["container.id"] == nil
+  resource:
+    attributes:
+      - key: service.instance.id
+        from_attribute: container.id
+        action: insert
+      - key: deployment.environment.name
+        value: dev
+        action: upsert
 
 connectors:
   spanmetrics:
@@ -127,22 +129,24 @@ service:
       - otlp
       - tcplog/docker
       processors:
+      - resourcedetection
+      - resource
       - batch
       exporters:
       - debug/logs
-      - otlphttp/logs
+      - otlp_http/logs
     metrics:
       receivers:
       - otlp
       - prometheus/collector
       processors:
       - resourcedetection
+      - resource
       - deltatocumulative
-      - transform/otel
       - batch
       exporters:
       - debug/metrics
-      - otlphttp/metrics
+      - otlp_http/metrics
     # profiles:
     #   receivers:
     #   - otlp
@@ -152,10 +156,12 @@ service:
       receivers:
       - otlp
       processors:
+      - resourcedetection
+      - resource
       - batch
       exporters:
       - debug/traces
-      - otlphttp/traces
+      - otlp_http/traces
     # metrics/spanmetrics:
     #   receivers: [spanmetrics]
     #   exporters: [prometheus]

@@ -54,17 +54,20 @@ processors:
     check_interval: 2s
     limit_mib: 1800
     spike_limit_mib: 500
-  attributes:
-    actions:
-    - key: instance
-      action: insert
-      value: opentelemetry-lab
+  resource:
+    attributes:
+      - key: service.instance.id
+        from_attribute: container.id
+        action: insert
+      - key: deployment.environment.name
+        value: dev
+        action: upsert
   resourcedetection:
     detectors: [env, system]
     timeout: 2s
 
 exporters:
-  otlphttp/logs:
+  otlp_http/logs:
     endpoint: ${OTEL_EXPORTER_OTLP_LOGS_ENDPOINT}
     headers:
       x-greptime-db-name: "opentelemetry_lab_logs"
@@ -73,7 +76,7 @@ exporters:
       # x-greptime-pipeline-version: 'v1.0.0'
     tls:
       insecure: true
-  otlphttp/metrics:
+  otlp_http/metrics:
     endpoint: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT}
     headers:
       x-greptime-db-name: "opentelemetry_lab_metrics"
@@ -83,7 +86,7 @@ exporters:
   #   endpoint: ${OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT}
   #   tls:
   #     insecure: true
-  otlphttp/traces:
+  otlp_http/traces:
     endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT}
     headers:
       x-greptime-db-name: "opentelemetry_lab_traces"
@@ -124,10 +127,11 @@ service:
       - otlp
       - tcplog/docker
       processors:
+      - resourcedetection
+      - resource
       - batch
-      - attributes
       exporters:
-      - otlphttp/logs
+      - otlp_http/logs
       - debug/logs
     metrics:
       receivers:
@@ -135,9 +139,10 @@ service:
       - prometheus/collector
       processors:
       - resourcedetection
+      - resource
       - batch
       exporters:
-      - otlphttp/metrics
+      - otlp_http/metrics
       - debug/metrics
     # profiles:
     #   receivers:
@@ -148,9 +153,11 @@ service:
       receivers:
       - otlp
       processors:
+      - resourcedetection
+      - resource
       - batch
       exporters:
-      - otlphttp/traces
+      - otlp_http/traces
       - debug/traces
     # metrics/spanmetrics:
     #   receivers: [spanmetrics]
