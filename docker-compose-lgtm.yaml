@@ -31,6 +31,7 @@ services:
     - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://prometheus:9090/api/v1/otlp
     - OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT=http://pyroscope:9097
     - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://tempo:4318
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=otel-collector,service.criticality=low,service.version=0.147.0
 
   # alloy:
   #   image: grafana/alloy:v1.4.0
@@ -60,6 +61,8 @@ services:
     - loki-data:/loki
     ports:
     - "3100:3100"
+    environment:
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=loki,service.criticality=low,service.version=3.6.7
 
   tempo:
     <<: *common
@@ -72,6 +75,8 @@ services:
     ports:
     - "3417:4317" # OTLP gRPC receiver
     - "3418:4318" # OTLP http receiver
+    environment:
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=tempo,service.criticality=low,service.version=2.10.1
 
   pyroscope:
     <<: *common
@@ -83,6 +88,8 @@ services:
     - pyroscope-data:/var/pyroscope
     ports:
     - "3097:9097"
+    environment:
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=pyroscope,service.criticality=low,service.version=1.18.1
 
   prometheus:
     <<: *common
@@ -95,6 +102,8 @@ services:
     - --web.enable-otlp-receiver
     ports:
     - "3090:9090"
+    environment:
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=prometheus,service.criticality=low,service.version=v3.9.1
 
   grafana:
     <<: *common
@@ -109,6 +118,7 @@ services:
       GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
       GF_AUTH_DISABLE_LOGIN_FORM: "true"
       GF_FEATURE_TOGGLES_ENABLE: "timeSeriesTable,traceqlEditor"
+      OTEL_RESOURCE_ATTRIBUTES: "deployment.environment.name=docker,service.name=grafana,service.criticality=low,service.version=12.4.0"
     ports:
     - "3000:3000"
 

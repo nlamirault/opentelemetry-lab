@@ -27,6 +27,7 @@ services:
     - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://victorialogs:9428/insert/opentelemetry/v1/logs
     - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://victoriametrics:8428/opentelemetry
     - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://victoriatraces:10428/insert/opentelemetry/v1/traces
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=otel-collector,service.criticality=low,service.version=0.147.0
 
   victoriametrics:
     <<: *common
@@ -38,6 +39,8 @@ services:
     - "--opentelemetry.usePrometheusNaming=true"
     volumes:
     - "vmdata:/storage"
+    environment:
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=victoriametrics,service.criticality=low,service.version=v1.128.0
 
   victorialogs:
     <<: *common
@@ -48,6 +51,8 @@ services:
     - "--storageDataPath=/vlogs"
     volumes:
     - "vldata:/vlogs"
+    environment:
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=victorialogs,service.criticality=low,service.version=v1.36.1
 
   victoriatraces:
     <<: *common
@@ -59,6 +64,8 @@ services:
     - "--servicegraph.enableTask=true"
     volumes:
     - "vtdata:/vtraces"
+    environment:
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=victoriatraces,service.criticality=low,service.version=v0.4.0
 
   grafana:
     <<: *common
@@ -75,6 +82,7 @@ services:
     - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
     - GF_AUTH_DISABLE_LOGIN_FORM=true
     - GF_INSTALL_PLUGINS=victoriametrics-metrics-datasource,victoriametrics-logs-datasource
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=grafana,service.criticality=low,service.version=12.4.0
 
 volumes:
   vmdata: {}
