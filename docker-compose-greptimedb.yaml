@@ -42,6 +42,7 @@ services:
     - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://frontend0:4000/v1/otlp
     - OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT=http://frontend0:4000/v1/otlp
     - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://frontend0:4000/v1/otlp
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=otel-collector,service.criticality=low,service.version=0.147.0
 
   etcd0:
     <<: [*common, *etcd_common_settings]
@@ -63,6 +64,8 @@ services:
       - *etcd_initial_cluster_token
     volumes:
       - etcd:/var/lib/etcd
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=etcd0,service.criticality=low,service.version=v3.5.10
     healthcheck:
       test: [ "CMD", "etcdctl", "--endpoints=http://etcd0:2379", "endpoint", "health" ]
       interval: 5s
@@ -88,6 +91,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=metasrv,service.criticality=low,service.version=${GREPTIMEDB_VERSION:-latest}
     depends_on:
       etcd0:
         condition: service_healthy
@@ -110,6 +115,8 @@ services:
       - --http-addr=0.0.0.0:5000
     volumes:
       - datanode:/greptimedb_data
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=datanode0,service.criticality=low,service.version=${GREPTIMEDB_VERSION:-latest}
     healthcheck:
       test: [ "CMD", "curl", "-fv", "http://datanode0:5000/health" ]
       interval: 5s
@@ -141,6 +148,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=frontend0,service.criticality=low,service.version=${GREPTIMEDB_VERSION:-latest}
     depends_on:
       datanode0:
         condition: service_healthy
@@ -160,6 +169,8 @@ services:
       - --rpc-bind-addr=0.0.0.0:4004
       - --rpc-server-addr=flownode0:4004
       - --http-addr=0.0.0.0:4005
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=flownode0,service.criticality=low,service.version=${GREPTIMEDB_VERSION:-latest}
     depends_on:
       frontend0:
         condition: service_healthy

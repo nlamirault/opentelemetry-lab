@@ -90,6 +90,7 @@ services:
     - CLICKHOUSE_META_DATABASE=signoz_metadata
     - LOW_CARDINAL_EXCEPTION_GROUPING=false
     - TENANT_ID=default
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=otel-collector,service.criticality=low,service.version=v0.129.6
 
   init-clickhouse:
     <<: *common
@@ -123,6 +124,8 @@ services:
       clickhouse:
         condition: service_healthy
     restart: on-failure
+    environment:
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=schema-migrator-sync,service.criticality=low,service.version=${OTELCOL_TAG:-v0.129.5}
   schema-migrator-async:
     <<: *db-depend
     image: signoz/signoz-schema-migrator:${OTELCOL_TAG:-v0.129.5}
@@ -132,6 +135,8 @@ services:
       - --dsn=tcp://clickhouse:9000
       - --up=
     restart: on-failure
+    environment:
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=schema-migrator-async,service.criticality=low,service.version=${OTELCOL_TAG:-v0.129.5}
 
   zookeeper-1:
     <<: *zookeeper-defaults
@@ -148,6 +153,7 @@ services:
     - ZOO_AUTOPURGE_INTERVAL=1
     - ZOO_ENABLE_PROMETHEUS_METRICS=yes
     - ZOO_PROMETHEUS_METRICS_PORT_NUMBER=9141
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=signoz-zookeeper-1,service.criticality=low,service.version=3.7.1
 
   clickhouse:
     <<: *clickhouse-defaults
@@ -164,6 +170,9 @@ services:
     - ./etc/clickhouse/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml
     - clickhouse:/var/lib/clickhouse/
       # - ./etc/clickhouse/storage.xml:/etc/clickhouse-server/config.d/storage.xml
+    environment:
+    - CLICKHOUSE_SKIP_USER_SETUP=1
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=signoz-clickhouse,service.criticality=low,service.version=25.5.6
     deploy:
       resources:
         limits:
@@ -193,6 +202,7 @@ services:
     - DEPLOYMENT_TYPE=docker-standalone-amd
     - TELEMETRY_ENABLED=false
     - DOT_METRICS_ENABLED=false
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=signoz,service.criticality=low,service.version=v0.95.0
     healthcheck:
       test:
         - CMD
