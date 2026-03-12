@@ -62,8 +62,8 @@ processors:
       - key: service.instance.id
         from_attribute: container.id
         action: insert
-      - key: deployment.environment
-        value: opentelemetry-lab
+      - key: deployment.environment.name
+        value: dev
         action: upsert
   resourcedetection:
     detectors: [env, system]
