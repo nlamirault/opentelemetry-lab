@@ -9,4 +9,4 @@ COPY . .
 
 RUN yarn install
 
-CMD node app.js
+CMD ["node", "src/app.js"]

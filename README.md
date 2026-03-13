@@ -8,25 +8,34 @@
 
 | Language   | Logs | Metrics | Traces |
 | ---------- | ---- | ------- | ------ |
-| Go         | ✅   |         |        |
-| Java       |      |         |        |
-| Javascript | ✅   |         |        |
-| Python     | ✅   |         |        |
-| React      |      |         |        |
-| Rust       | ✅   |         |        |
-| Swift      | ✅   |         |        |
-| TypeScript |      |         |        |
+| Go         | ✅   | ✅      | ✅     |
+| Java       | ✅   | ✅      | ✅     |
+| JavaScript | ✅   | ✅      | ✅     |
+| Python     | ✅   | ✅      | ✅     |
+| React      | ✅   |         | ✅     |
+| Rust       | ✅   | ✅      | ✅     |
+| Swift      | ✅   | ✅      | ✅     |
+| TypeScript | ✅   | ✅      | ✅     |
 
 ## Usage
 
 You could choose which Observability stack you want to use:
 
 - ✅ lgtm: Prometheus, Loki, Tempo
-- ✅ clickhouse: Clickhouse
+- ✅ clickhouse: SigNoz with Clickhouse
 - ✅ greptimedb: GreptimeDB
+- ✅ victoriastack: VictoriaMetrics, VictoriaLogs, VictoriaTraces
+
+### Start Observability stack
 
 ```shell
-make docker-run CHOICE=xxx
+make start-observability CHOICE=xxx
+```
+
+### Start Applications
+
+```shell
+make start-apps
 ```
 
 ## Port Mapping
@@ -84,10 +93,19 @@ make docker-run CHOICE=xxx
 
 | Public Port | Container Port | Service    | Description           |
 | ----------- | -------------- | ---------- | --------------------- |
-| 5317        | 4317           | SigNoz     | OTLP gRPC receiver    |
-| 5318        | 4318           | SigNoz     | OTLP HTTP receiver    |
-| 5060        | 6060           | SigNoz     | pprof profiling port  |
+| 4317        | 4317           | SigNoz     | OTLP gRPC receiver    |
+| 4318        | 4318           | SigNoz     | OTLP HTTP receiver    |
 | 5123        | 8123           | ClickHouse | HTTP interface        |
 | 5080        | 8080           | SigNoz     | Web UI                |
 | 5000        | 9000           | ClickHouse | Native TCP interface  |
 | 5181        | 9181           | ClickHouse | Interserver HTTP port |
+
+### Victoria Stack (docker-compose-victoriastack.yaml)
+
+| Public Port | Container Port | Service         | Description                             |
+| ----------- | -------------- | --------------- | --------------------------------------- |
+| 3000        | 3000           | Grafana         | Web UI for dashboards and visualization |
+| 8428        | 8428           | VictoriaMetrics | Metrics storage and query API           |
+| 9428        | 9428           | VictoriaLogs    | Logs storage and query API              |
+| 10428       | 10428          | VictoriaTraces  | Traces storage and query API            |
+
