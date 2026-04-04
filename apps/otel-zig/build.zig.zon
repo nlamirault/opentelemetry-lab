@@ -1,0 +1,23 @@
+// SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+// SPDX-License-Identifier: Apache-2.0
+
+.{
+    .name = .otel_zig,
+    .version = "1.0.0",
+    .minimum_zig_version = "0.15.2",
+    .fingerprint = 0xddd44b847b4a7b61,
+
+    .dependencies = .{
+        .opentelemetry = .{
+            .url = "git+https://github.com/zig-o11y/opentelemetry-sdk?ref=v0.1.0#f847c4f73831b0f8aa165c20d593fcde40df3212",
+            .hash = "opentelemetry-0.0.1-U_uKJxPFCQA-85CI3OYyNwe2oy7rwfWh45_2mucVrTSS",
+        },
+    },
+
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "README.md",
+    },
+}
