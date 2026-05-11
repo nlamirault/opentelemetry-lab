@@ -13,7 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
-    "@opentelemetry/auto-instrumentations-node": "^0.64.6",
+    "@opentelemetry/auto-instrumentations-node": "^0.75.0",
     "@opentelemetry/core": "^2.1.0",
     "@opentelemetry/exporter-logs-otlp-grpc": "^0.205.0",
     "@opentelemetry/exporter-logs-otlp-http": "^0.205.0",
