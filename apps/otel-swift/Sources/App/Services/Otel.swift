@@ -18,7 +18,7 @@ struct OTelResourceProvider {
   func getResource() -> Resource {
     let customResource: Resource = Resource.init(attributes: [
       SemanticConventions.Service.name.rawValue: AttributeValue.string(serviceName),
-      SemanticConventions.Service.version.rawValue: AttributeValue.string("1.0.0"),
+      SemanticConventions.Service.version.rawValue: AttributeValue.string(Constants.version),
       SemanticConventions.Telemetry.distroName.rawValue: AttributeValue.string("swift"),
       SemanticConventions.Telemetry.sdkName.rawValue: AttributeValue.string("opentelemetry"),
       SemanticConventions.Telemetry.sdkVersion.rawValue: AttributeValue.string(
