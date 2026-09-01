@@ -3,7 +3,7 @@
 
 import Foundation
 
-internal let runtimeVersion: String = ProcessInfo().operatingSystemVersionString
+internal let runtimeVersion: String = ProcessInfo.processInfo.operatingSystemVersionString
 
 struct Instrumentation {
     static let instrumentationVersion: String = "semver:0.1.0"

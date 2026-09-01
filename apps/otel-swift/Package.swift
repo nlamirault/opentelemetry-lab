@@ -35,7 +35,6 @@ let package: Package = Package(
         .product(name: "OpenTelemetryProtocolExporterHTTP", package: "opentelemetry-swift"),
         .product(name: "OTelSwiftLog", package: "opentelemetry-swift"),
         .product(name: "PersistenceExporter", package: "opentelemetry-swift"),
-        .product(name: "ResourceExtension", package: "opentelemetry-swift"),
         .product(name: "StdoutExporter", package: "opentelemetry-swift-core"),
       ],
       swiftSettings: swiftSettings

@@ -6,7 +6,6 @@ import NIOCore
 import NIOPosix
 import OpenTelemetryApi
 import OpenTelemetrySdk
-import ResourceExtension
 import StdoutExporter
 import Vapor
 

@@ -38,6 +38,28 @@ make start-observability CHOICE=xxx
 make start-apps
 ```
 
+### `make start-apps` vs `make run`
+
+These two targets serve different purposes:
+
+- **`make start-apps`** — runs the full application stack with Docker Compose,
+  layering `docker-compose-core.yaml` (which defines the shared
+  `opentelemetry-lab` network and core services such as the OpenTelemetry
+  Collector) with `docker-compose-apps.yaml`. Containers are started detached
+  (`-d`), joined to the shared network, and their ports are published to the
+  host, so endpoints like `http://127.0.0.1:9191/health` are reachable. This is
+  the way to actually exercise an application and see its telemetry flow to the
+  collector.
+
+- **`make run APP=<app>`** — builds and launches a single application image on
+  its own (`docker run --rm`). It does **not** attach the shared network,
+  publish any ports, or start the collector. It is only a build-and-boot smoke
+  test to confirm the image compiles and the server starts; the app is not
+  reachable from the host and has nothing to export telemetry to.
+
+Use `make start-apps` for real usage; use `make run` only to quickly validate a
+single app's image.
+
 ## Port Mapping
 
 ### Core Services
