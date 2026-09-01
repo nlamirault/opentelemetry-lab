@@ -32,6 +32,10 @@ apps/otel-ts/node_modules
 # React
 apps/otel-react/node_modules
 
+# Zig
+apps/otel-zig/.zig-cache/
+apps/otel-zig/zig-out/
+
 # Python
 .venv
 **/__pycache__/

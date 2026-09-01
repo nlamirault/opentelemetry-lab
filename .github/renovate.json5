@@ -65,5 +65,6 @@
       "updateTypes": ["patch"],
       "labels": ["kind/renovate", "lifecycle/active", "status/review_needed", "area/github", "dependency/github", "priority/low", "size/xs"]
     },
-  ]
+  ],
+  "minimumReleaseAge": "7 days"
 }

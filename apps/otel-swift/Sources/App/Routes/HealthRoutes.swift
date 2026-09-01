@@ -3,7 +3,6 @@
 
 import OpenTelemetryApi
 import OpenTelemetrySdk
-import ResourceExtension
 import Vapor
 
 struct HealthRoutes {

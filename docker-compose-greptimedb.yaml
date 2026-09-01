@@ -16,7 +16,7 @@ x-custom:
   etcd_common_settings: &etcd_common_settings
     image: "${ETCD_REGISTRY:-quay.io}/${ETCD_NAMESPACE:-coreos}/etcd:${ETCD_VERSION:-v3.5.10}"
     entrypoint: /usr/local/bin/etcd
-  greptimedb_image: &greptimedb_image "${GREPTIMEDB_REGISTRY:-docker.io}/${GREPTIMEDB_NAMESPACE:-greptime}/greptimedb:${GREPTIMEDB_VERSION:-latest}"
+  greptimedb_image: &greptimedb_image "${GREPTIMEDB_REGISTRY:-docker.io}/${GREPTIMEDB_NAMESPACE:-greptime}/greptimedb:${GREPTIMEDB_VERSION:-v1.1.2}"
 
 services:
 
@@ -77,8 +77,8 @@ services:
     image: *greptimedb_image
     container_name: metasrv
     ports:
-      - 4002:3002
-      - 4006:3000
+      - 4022:3002
+      - 4020:3000
     command:
       - metasrv
       - start
@@ -102,8 +102,8 @@ services:
     image: *greptimedb_image
     container_name: datanode0
     ports:
-      - 4001:3001
-      - 4007:5000
+      - 4010:3001
+      - 4011:5000
     command:
       - datanode
       - start

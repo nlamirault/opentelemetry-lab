@@ -9,7 +9,6 @@ import OpenTelemetryProtocolExporterCommon
 import OpenTelemetryProtocolExporterGrpc
 import OpenTelemetryProtocolExporterHttp
 import OpenTelemetrySdk
-import ResourceExtension
 import StdoutExporter
 import Vapor
 
@@ -24,8 +23,7 @@ struct OTelResourceProvider {
       SemanticConventions.Telemetry.sdkVersion.rawValue: AttributeValue.string(
         Resource.OTEL_SWIFT_SDK_VERSION),
     ])
-    let defaultResources: Resource = DefaultResources().get()
-    return defaultResources.merging(other: customResource)
+    return customResource
   }
 
 }

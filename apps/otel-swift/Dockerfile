@@ -4,8 +4,9 @@
 # ================================
 # Build image
 # ================================
-FROM swift:6.0-noble AS build
+FROM swift:6.3-noble AS build
 
+# Install OS updates
 # Install OS updates
 RUN export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true \
     && apt-get -q update \
