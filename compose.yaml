@@ -1,0 +1,773 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+---
+name: opentelemetry-lab
+
+# Usage (Docker Compose v2 profiles):
+#   docker compose --profile lgtm --profile apps up -d
+#   docker compose --profile signoz up -d
+# Or persist the selection in .env:
+#   COMPOSE_PROFILES=lgtm,apps
+#   docker compose up -d
+#
+# Backends are mutually exclusive (each binds OTLP 4317/4318). Pick ONE of:
+#   lgtm | signoz | greptimedb | victoriastack
+# The active backend's collector claims the `otel-collector` network alias,
+# so applications always target http://otel-collector:4317 regardless of backend.
+
+networks:
+  opentelemetry-lab:
+    driver: bridge
+    name: opentelemetry-lab
+
+x-common: &common
+  networks:
+  - opentelemetry-lab
+  restart: unless-stopped
+  logging:
+    options:
+      max-size: 50m
+      max-file: "3"
+
+# Collector network config: joins the shared network and advertises the
+# stable `otel-collector` alias so applications never need to know the backend.
+x-collector-net: &collector-net
+  opentelemetry-lab:
+    aliases:
+    - otel-collector
+
+# --- SigNoz anchors ---------------------------------------------------------
+x-clickhouse-defaults: &clickhouse-defaults
+  <<: *common
+  image: clickhouse/clickhouse-server:25.5.6
+  tty: true
+  labels:
+    signoz.io/scrape: "true"
+    signoz.io/port: "9363"
+    signoz.io/path: "/metrics"
+  depends_on:
+    init-clickhouse:
+      condition: service_completed_successfully
+    zookeeper-1:
+      condition: service_healthy
+  healthcheck:
+    test:
+      - CMD
+      - wget
+      - --spider
+      - -q
+      - 0.0.0.0:8123/ping
+    interval: 30s
+    timeout: 5s
+    retries: 3
+  ulimits:
+    nproc: 65535
+    nofile:
+      soft: 262144
+      hard: 262144
+  environment:
+    - CLICKHOUSE_SKIP_USER_SETUP=1
+
+x-zookeeper-defaults: &zookeeper-defaults
+  <<: *common
+  image: signoz/zookeeper:3.7.1
+  user: root
+  labels:
+    signoz.io/scrape: "true"
+    signoz.io/port: "9141"
+    signoz.io/path: "/metrics"
+  healthcheck:
+    test:
+    - CMD-SHELL
+    - curl -s -m 2 http://localhost:8080/commands/ruok | grep error | grep null
+    interval: 30s
+    timeout: 5s
+    retries: 3
+
+x-db-depend: &db-depend
+  <<: *common
+  depends_on:
+    clickhouse:
+      condition: service_healthy
+    schema-migrator-sync:
+      condition: service_completed_successfully
+
+# --- GreptimeDB anchors -----------------------------------------------------
+x-custom:
+  etcd_initial_cluster_token: &etcd_initial_cluster_token "--initial-cluster-token=etcd-cluster"
+  etcd_common_settings: &etcd_common_settings
+    image: "${ETCD_REGISTRY:-quay.io}/${ETCD_NAMESPACE:-coreos}/etcd:${ETCD_VERSION:-v3.5.10}"
+    entrypoint: /usr/local/bin/etcd
+  greptimedb_image: &greptimedb_image "${GREPTIMEDB_REGISTRY:-docker.io}/${GREPTIMEDB_NAMESPACE:-greptime}/greptimedb:${GREPTIMEDB_VERSION:-v1.1.2}"
+
+services:
+
+  # ==========================================================================
+  # Applications (profile: apps)
+  # ==========================================================================
+  otel-python:
+    <<: *common
+    profiles: [apps]
+    build: ./apps/otel-python/
+    ports:
+    - "8000:8000"
+    environment:
+    - EXPOSE_PORT=8000
+    - TARGET_ONE_SVC=http://otel-js:3001
+    - TARGET_TWO_SVC=http://otel-java:8080
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    - OTEL_SERVICE_NAME=otel-python
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=otel-python,service.criticality=medium,service.version=v1.0.0
+    command: "opentelemetry-instrument python main.py"
+
+  otel-java:
+    <<: *common
+    profiles: [apps]
+    build: ./apps/otel-java/
+    container_name: otel-java
+    ports:
+    - "8080:8080"
+    environment:
+    - EXPOSE_PORT=8080
+    - TARGET_ONE_SVC=http://otel-python:8000
+    - TARGET_TWO_SVC=http://otel-js:3001
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    - OTEL_SERVICE_NAME=otel-java
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=otel-java,service.criticality=medium,service.version=v1.0.0
+    command: "java -javaagent:/opentelemetry-javaagent.jar -jar /app.jar"
+
+  otel-js:
+    <<: *common
+    profiles: [apps]
+    build: ./apps/otel-js/
+    container_name: otel-js
+    ports:
+    - "3001:3001"
+    environment:
+    - EXPOSE_PORT=3001
+    - TARGET_ONE_SVC=http://otel-go:8888
+    - TARGET_TWO_SVC=http://otel-rust:9999
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    - OTEL_SERVICE_NAME=otel-js
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=otel-js,service.criticality=medium,service.version=v1.0.0
+    command: "node --require '@opentelemetry/auto-instrumentations-node/register' src/app.js"
+
+  otel-rust:
+    <<: *common
+    profiles: [apps]
+    build: ./apps/otel-rust/
+    container_name: otel-rust
+    ports:
+    - "9999:9999"
+    environment:
+    - EXPOSE_PORT=9999
+    - TARGET_ONE_SVC=http://otel-go:8888
+    - TARGET_TWO_SVC=http://otel-python:8000
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    - OTEL_SERVICE_NAME=otel-rust
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=otel-rust,service.criticality=medium,service.version=v1.0.0
+    # command: "otel-rust"
+
+  otel-go:
+    <<: *common
+    profiles: [apps]
+    build: ./apps/otel-go/
+    container_name: otel-go
+    ports:
+    - "8888:8888"
+    environment:
+    - EXPOSE_PORT=8888
+    - TARGET_ONE_SVC=http://otel-rust:9999
+    - TARGET_TWO_SVC=http://otel-java:8080
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    - OTEL_SERVICE_NAME=otel-go
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=otel-go,service.criticality=medium,service.version=v1.0.0
+    # command: "otel-go"
+
+  otel-swift:
+    <<: *common
+    profiles: [apps]
+    build: ./apps/otel-swift/
+    container_name: otel-swift
+    ports:
+    - "9191:9191"
+    environment:
+    - EXPOSE_PORT=9191
+    - TARGET_ONE_SVC=http://otel-rust:9999
+    - TARGET_TWO_SVC=http://otel-js:3001
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    - OTEL_SERVICE_NAME=otel-swift
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=otel-swift,service.criticality=medium,service.version=v1.0.0
+    - LOG_LEVEL=debug
+    command: ["serve", "--env", "production", "--hostname", "0.0.0.0", "--port", "9191"]
+
+  otel-ts:
+    <<: *common
+    profiles: [apps]
+    build: ./apps/otel-ts/
+    container_name: otel-ts
+    ports:
+    - "3333:3333"
+    environment:
+    - EXPOSE_PORT=3333
+    - TARGET_ONE_SVC=http://otel-go:8888
+    - TARGET_TWO_SVC=http://otel-rust:9999
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    - OTEL_SERVICE_NAME=otel-ts
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=otel-ts,service.criticality=medium,service.version=v1.0.0
+    command: "node --require '@opentelemetry/auto-instrumentations-node/register' dist/index.js"
+
+  otel-react:
+    <<: *common
+    profiles: [apps]
+    build: ./apps/otel-react/
+    container_name: otel-react
+    ports:
+    - "3434:3434"
+    environment:
+    - PORT=3434
+    - TARGET_ONE_SVC=http://otel-js:3001
+    - TARGET_TWO_SVC=http://otel-java:8080
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    - OTEL_SERVICE_NAME=otel-react
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=otel-react,service.criticality=low,service.version=v1.0.0
+    command: ""
+
+  # ==========================================================================
+  # LGTM backend (profile: lgtm) — Prometheus, Loki, Tempo, Pyroscope, Grafana
+  # ==========================================================================
+  otel-collector-lgtm:
+    <<: *common
+    profiles: [lgtm]
+    image: otel/opentelemetry-collector-contrib:0.147.0
+    container_name: otel
+    networks: *collector-net
+    command:
+    - "--config=/conf/config.yaml"
+    - "--feature-gates=service.profilesSupport"
+    volumes:
+    - ./etc/otel/otel-collector-lgtm.yaml:/conf/config.yaml
+    ports:
+    - "4317:4317" # OTLP gRPC receiver
+    - "4318:4318" # OTLP http receiver
+    - "8888:8888"
+    - "8889:8889"
+    environment:
+    - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://loki:3100/otlp
+    - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://prometheus:9090/api/v1/otlp
+    - OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT=http://pyroscope:9097
+    - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://tempo:4318
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=otel-collector,service.criticality=low,service.version=0.147.0
+
+  loki:
+    <<: *common
+    profiles: [lgtm]
+    image: grafana/loki:3.6.7
+    container_name: loki
+    entrypoint: /usr/bin/loki
+    command: ["-config.file=/etc/loki/config.yaml"]
+    volumes:
+    - ./etc/loki/config.yaml:/etc/loki/config.yaml
+    - loki-data:/loki
+    ports:
+    - "3100:3100"
+    environment:
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=loki,service.criticality=low,service.version=3.6.7
+
+  tempo:
+    <<: *common
+    profiles: [lgtm]
+    image: grafana/tempo:2.10.1
+    container_name: tempo
+    command: ["-config.file=/etc/tempo/config.yaml"]
+    volumes:
+    - ./etc/tempo/config.yaml:/etc/tempo/config.yaml
+    - tempo-data:/var/tempo
+    ports:
+    - "3417:4317" # OTLP gRPC receiver
+    - "3418:4318" # OTLP http receiver
+    environment:
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=tempo,service.criticality=low,service.version=2.10.1
+
+  pyroscope:
+    <<: *common
+    profiles: [lgtm]
+    image: grafana/pyroscope:1.18.1
+    container_name: pyroscope
+    command: ["-config.file=/etc/pyroscope/config.yaml"]
+    volumes:
+    - ./etc/pyroscope/config.yaml:/etc/pyroscope/config.yaml
+    - pyroscope-data:/var/pyroscope
+    ports:
+    - "3097:9097"
+    environment:
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=pyroscope,service.criticality=low,service.version=1.18.1
+
+  prometheus:
+    <<: *common
+    profiles: [lgtm]
+    image: prom/prometheus:v3.9.1
+    container_name: prometheus
+    volumes:
+    - ./etc/prometheus/prometheus.yml:/workspace/prometheus.yml
+    command:
+    - --config.file=/workspace/prometheus.yml
+    - --web.enable-otlp-receiver
+    ports:
+    - "3090:9090"
+    environment:
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=prometheus,service.criticality=low,service.version=v3.9.1
+
+  grafana-lgtm:
+    <<: *common
+    profiles: [lgtm]
+    image: grafana/grafana:12.4.0
+    container_name: grafana
+    volumes:
+    - ./etc/grafana/dashboards-lgtm.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
+    - ./etc/grafana/datasource-lgtm.yml:/etc/grafana/provisioning/datasources/datasource.yml
+    - ./etc/grafana/dashboards/lgtm:/var/lib/grafana/dashboards
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_FEATURE_TOGGLES_ENABLE: "timeSeriesTable,traceqlEditor"
+      OTEL_RESOURCE_ATTRIBUTES: "deployment.environment.name=docker,service.name=grafana,service.criticality=low,service.version=12.4.0"
+    ports:
+    - "3000:3000"
+
+  # ==========================================================================
+  # SigNoz backend (profile: signoz) — ClickHouse, Zookeeper, SigNoz
+  # ==========================================================================
+  otel-collector-signoz:
+    <<: *common
+    profiles: [signoz]
+    image: signoz/signoz-otel-collector:v0.129.6
+    container_name: otel
+    networks: *collector-net
+    command:
+    - "--config=/conf/config.yaml"
+    - "--feature-gates=service.profilesSupport"
+    volumes:
+    - ./etc/otel/otel-collector-signoz.yaml:/conf/config.yaml
+    ports:
+    - "4317:4317" # OTLP gRPC receiver
+    - "4318:4318" # OTLP http receiver
+    - "8889:8889" # Prometheus metrics exporter
+    environment:
+    - CLICKHOUSE_ENDPOINT=tcp://clickhouse:9000 # tcp://user:passwd@clickhouse:9090
+    - CLICKHOUSE_LOG_DATABASE=signoz_logs
+    - CLICKHOUSE_METRIC_DATABASE=signoz_metrics
+    - CLICKHOUSE_TRACE_DATABASE=signoz_traces
+    - CLICKHOUSE_META_DATABASE=signoz_metadata
+    - LOW_CARDINAL_EXCEPTION_GROUPING=false
+    - TENANT_ID=default
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=otel-collector,service.criticality=low,service.version=v0.129.6
+
+  init-clickhouse:
+    <<: *common
+    profiles: [signoz]
+    image: clickhouse/clickhouse-server:25.5.6
+    container_name: signoz-init-clickhouse
+    command:
+    - bash
+    - -c
+    - |
+      version="v0.0.1"
+      node_os=$$(uname -s | tr '[:upper:]' '[:lower:]')
+      node_arch=$$(uname -m | sed s/aarch64/arm64/ | sed s/x86_64/amd64/)
+      echo "Fetching histogram-binary for $${node_os}/$${node_arch}"
+      cd /tmp
+      wget -O histogram-quantile.tar.gz "https://github.com/SigNoz/signoz/releases/download/histogram-quantile%2F$${version}/histogram-quantile_$${node_os}_$${node_arch}.tar.gz"
+      tar -xvzf histogram-quantile.tar.gz
+      mv histogram-quantile /var/lib/clickhouse/user_scripts/histogramQuantile
+    restart: on-failure
+    volumes:
+    - ./etc/clickhouse/user_scripts:/var/lib/clickhouse/user_scripts/
+
+  schema-migrator-sync:
+    <<: *common
+    profiles: [signoz]
+    image: signoz/signoz-schema-migrator:${OTELCOL_TAG:-v0.129.5}
+    container_name: schema-migrator-sync
+    command:
+      - sync
+      - --dsn=tcp://clickhouse:9000
+      - --up=
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    restart: on-failure
+    environment:
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=schema-migrator-sync,service.criticality=low,service.version=${OTELCOL_TAG:-v0.129.5}
+
+  schema-migrator-async:
+    <<: *db-depend
+    profiles: [signoz]
+    image: signoz/signoz-schema-migrator:${OTELCOL_TAG:-v0.129.5}
+    container_name: schema-migrator-async
+    command:
+      - async
+      - --dsn=tcp://clickhouse:9000
+      - --up=
+    restart: on-failure
+    environment:
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=schema-migrator-async,service.criticality=low,service.version=${OTELCOL_TAG:-v0.129.5}
+
+  zookeeper-1:
+    <<: *zookeeper-defaults
+    profiles: [signoz]
+    container_name: signoz-zookeeper-1
+    volumes:
+    - zookeeper-1:/bitnami/zookeeper
+    environment:
+    - ZOO_SERVER_ID=1
+    - ALLOW_ANONYMOUS_LOGIN=yes
+    - ZOO_AUTOPURGE_INTERVAL=1
+    - ZOO_ENABLE_PROMETHEUS_METRICS=yes
+    - ZOO_PROMETHEUS_METRICS_PORT_NUMBER=9141
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=signoz-zookeeper-1,service.criticality=low,service.version=3.7.1
+
+  clickhouse:
+    <<: *clickhouse-defaults
+    profiles: [signoz]
+    container_name: signoz-clickhouse
+    ports:
+      - "5000:9000"
+      - "5123:8123"
+      - "5181:9181"
+    volumes:
+    - ./etc/clickhouse/config.xml:/etc/clickhouse-server/config.xml
+    - ./etc/clickhouse/users.xml:/etc/clickhouse-server/users.xml
+    - ./etc/clickhouse/custom-function.xml:/etc/clickhouse-server/custom-function.xml
+    - ./etc/clickhouse/user_scripts:/var/lib/clickhouse/user_scripts/
+    - ./etc/clickhouse/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml
+    - clickhouse:/var/lib/clickhouse/
+    environment:
+    - CLICKHOUSE_SKIP_USER_SETUP=1
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=signoz-clickhouse,service.criticality=low,service.version=25.5.6
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 3G
+
+  signoz:
+    <<: *db-depend
+    profiles: [signoz]
+    image: signoz/signoz:v0.95.0
+    container_name: signoz
+    command:
+      - --config=/root/config/prometheus.yml
+    ports:
+    - "5080:8080" # signoz port
+    volumes:
+    - ./etc/signoz/prometheus.yml:/workspace/prometheus.yml
+    - ./etc/signoz/dashboards:/root/config/dashboards
+    - sqlite:/var/lib/signoz/
+    environment:
+    - SIGNOZ_ALERTMANAGER_PROVIDER=signoz
+    - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://clickhouse:9000
+    - SIGNOZ_SQLSTORE_SQLITE_PATH=/var/lib/signoz/signoz.db
+    - DASHBOARDS_PATH=/root/config/dashboards
+    - STORAGE=clickhouse
+    - GODEBUG=netdns=go
+    - DEPLOYMENT_TYPE=docker-standalone-amd
+    - TELEMETRY_ENABLED=false
+    - DOT_METRICS_ENABLED=false
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=signoz,service.criticality=low,service.version=v0.95.0
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --spider
+        - -q
+        - localhost:8080/api/v1/health
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ==========================================================================
+  # GreptimeDB backend (profile: greptimedb) — etcd + GreptimeDB cluster
+  # ==========================================================================
+  otel-collector-greptimedb:
+    <<: *common
+    profiles: [greptimedb]
+    image: otel/opentelemetry-collector-contrib:0.147.0
+    container_name: otel
+    networks: *collector-net
+    command:
+    - "--config=/conf/config.yaml"
+    - "--feature-gates=service.profilesSupport"
+    volumes:
+    - ./etc/otel/otel-collector-greptimedb.yaml:/conf/config.yaml
+    ports:
+    - "4317:4317" # OTLP gRPC receiver
+    - "4318:4318" # OTLP http receiver
+    - "8889:8889" # Prometheus metrics exporter
+    environment:
+    - GREPTIME_LOGS_DB_NAME=opentelemetry_lab_logs
+    - GREPTIME_METRICS_DB_NAME=opentelemetry_lab_metrics
+    - GREPTIME_TRACES_DB_NAME=opentelemetry_lab_traces
+    - OTEL_EXPORTER_OTLP_PROTOCOL=http
+    - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://frontend0:4000/v1/otlp
+    - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://frontend0:4000/v1/otlp
+    - OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT=http://frontend0:4000/v1/otlp
+    - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://frontend0:4000/v1/otlp
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=otel-collector,service.criticality=low,service.version=0.147.0
+
+  etcd0:
+    <<: [*common, *etcd_common_settings]
+    profiles: [greptimedb]
+    container_name: etcd0
+    ports:
+      - 4379:2379
+      - 4380:2380
+    command:
+      - --name=etcd0
+      - --data-dir=/var/lib/etcd
+      - --initial-advertise-peer-urls=http://etcd0:2380
+      - --listen-peer-urls=http://0.0.0.0:2380
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://etcd0:2379
+      - --heartbeat-interval=250
+      - --election-timeout=1250
+      - --initial-cluster=etcd0=http://etcd0:2380
+      - --initial-cluster-state=new
+      - *etcd_initial_cluster_token
+    volumes:
+      - etcd:/var/lib/etcd
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=etcd0,service.criticality=low,service.version=v3.5.10
+    healthcheck:
+      test: [ "CMD", "etcdctl", "--endpoints=http://etcd0:2379", "endpoint", "health" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  metasrv:
+    <<: *common
+    profiles: [greptimedb]
+    image: *greptimedb_image
+    container_name: metasrv
+    ports:
+      - 4022:3002
+      - 4020:3000
+    command:
+      - metasrv
+      - start
+      - --store-addrs=etcd0:2379
+      - --rpc-bind-addr=0.0.0.0:3002
+      - --rpc-server-addr=metasrv:3002
+      - --http-addr=0.0.0.0:3000
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://metasrv:3000/health" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=metasrv,service.criticality=low,service.version=${GREPTIMEDB_VERSION:-latest}
+    depends_on:
+      etcd0:
+        condition: service_healthy
+
+  datanode0:
+    <<: *common
+    profiles: [greptimedb]
+    image: *greptimedb_image
+    container_name: datanode0
+    ports:
+      - 4010:3001
+      - 4011:5000
+    command:
+      - datanode
+      - start
+      - --node-id=0
+      - --data-home=/greptimedb_data
+      - --rpc-bind-addr=0.0.0.0:3001
+      - --rpc-server-addr=datanode0:3001
+      - --metasrv-addrs=metasrv:3002
+      - --http-addr=0.0.0.0:5000
+    volumes:
+      - datanode:/greptimedb_data
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=datanode0,service.criticality=low,service.version=${GREPTIMEDB_VERSION:-latest}
+    healthcheck:
+      test: [ "CMD", "curl", "-fv", "http://datanode0:5000/health" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      metasrv:
+        condition: service_healthy
+
+  frontend0:
+    <<: *common
+    profiles: [greptimedb]
+    image: *greptimedb_image
+    container_name: frontend0
+    ports:
+      - 4000:4000
+      - 4001:4001
+      - 4002:4002
+      - 4003:4003
+    command:
+      - frontend
+      - start
+      - --metasrv-addrs=metasrv:3002
+      - --http-addr=0.0.0.0:4000
+      - --rpc-bind-addr=0.0.0.0:4001
+      - --mysql-addr=0.0.0.0:4002
+      - --postgres-addr=0.0.0.0:4003
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://frontend0:4000/health" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=frontend0,service.criticality=low,service.version=${GREPTIMEDB_VERSION:-latest}
+    depends_on:
+      datanode0:
+        condition: service_healthy
+
+  flownode0:
+    <<: *common
+    profiles: [greptimedb]
+    image: *greptimedb_image
+    container_name: flownode0
+    ports:
+      - 4004:4004
+      - 4005:4005
+    command:
+      - flownode
+      - start
+      - --node-id=0
+      - --metasrv-addrs=metasrv:3002
+      - --rpc-bind-addr=0.0.0.0:4004
+      - --rpc-server-addr=flownode0:4004
+      - --http-addr=0.0.0.0:4005
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=flownode0,service.criticality=low,service.version=${GREPTIMEDB_VERSION:-latest}
+    depends_on:
+      frontend0:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://flownode0:4005/health" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ==========================================================================
+  # Victoria backend (profile: victoriastack) — VM, VLogs, VTraces, Grafana
+  # ==========================================================================
+  otel-collector-victoriastack:
+    <<: *common
+    profiles: [victoriastack]
+    image: otel/opentelemetry-collector-contrib:0.147.0
+    container_name: otel
+    networks: *collector-net
+    command:
+    - "--config=/conf/config.yaml"
+    volumes:
+    - ./etc/otel/otel-collector-victoriastack.yaml:/conf/config.yaml
+    ports:
+    - "4317:4317" # OTLP gRPC receiver
+    - "4318:4318" # OTLP http receiver
+    - "8888:8888" # Prometheus metrics exporter
+    - "8889:8889" # Prometheus metrics exporter
+    environment:
+    - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://victorialogs:9428/insert/opentelemetry/v1/logs
+    - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://victoriametrics:8428/opentelemetry
+    - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://victoriatraces:10428/insert/opentelemetry/v1/traces
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=otel-collector,service.criticality=low,service.version=0.147.0
+
+  victoriametrics:
+    <<: *common
+    profiles: [victoriastack]
+    image: victoriametrics/victoria-metrics:v1.128.0
+    ports:
+    - "8428:8428"
+    command:
+    - "--storageDataPath=/storage"
+    - "--opentelemetry.usePrometheusNaming=true"
+    volumes:
+    - "vmdata:/storage"
+    environment:
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=victoriametrics,service.criticality=low,service.version=v1.128.0
+
+  victorialogs:
+    <<: *common
+    profiles: [victoriastack]
+    image: victoriametrics/victoria-logs:v1.36.1
+    ports:
+    - "9428:9428"
+    command:
+    - "--storageDataPath=/vlogs"
+    volumes:
+    - "vldata:/vlogs"
+    environment:
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=victorialogs,service.criticality=low,service.version=v1.36.1
+
+  victoriatraces:
+    <<: *common
+    profiles: [victoriastack]
+    image: victoriametrics/victoria-traces:v0.4.0
+    ports:
+    - "10428:10428"
+    command:
+    - "--storageDataPath=/vtraces"
+    - "--servicegraph.enableTask=true"
+    volumes:
+    - "vtdata:/vtraces"
+    environment:
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=victoriatraces,service.criticality=low,service.version=v0.4.0
+
+  grafana-victoriastack:
+    <<: *common
+    profiles: [victoriastack]
+    image: grafana/grafana:12.4.0
+    container_name: grafana
+    ports:
+    - "3000:3000"
+    volumes:
+    - ./etc/grafana/dashboards-victoriastack.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
+    - ./etc/grafana/datasource-victoriastack.yml:/etc/grafana/provisioning/datasources/datasource.yml
+    - ./etc/grafana/dashboards/victoriastack:/var/lib/grafana/dashboards
+    environment:
+    - GF_AUTH_ANONYMOUS_ENABLED=true
+    - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    - GF_AUTH_DISABLE_LOGIN_FORM=true
+    - GF_INSTALL_PLUGINS=victoriametrics-metrics-datasource,victoriametrics-logs-datasource
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=grafana,service.criticality=low,service.version=12.4.0
+
+volumes:
+  # lgtm
+  tempo-data:
+  loki-data:
+  pyroscope-data:
+  # signoz
+  clickhouse:
+    name: signoz-clickhouse
+  sqlite:
+    name: signoz-sqlite
+  zookeeper-1:
+    name: signoz-zookeeper-1
+  # greptimedb
+  etcd:
+    name: greptimedb-etcd
+  datanode:
+    name: greptimedb-datanode
+  # victoriastack
+  vmdata: {}
+  vldata: {}
+  vtdata: {}

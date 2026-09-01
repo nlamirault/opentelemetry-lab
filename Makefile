@@ -58,35 +58,30 @@ run: guard-APP ## Launch Docker image
 
 ##@ Usage
 
-.PHONY: start-observability
-start-observability: guard-CHOICE ## Start the observability stack
-	@echo -e "$(INFO)$(INFO_COLOR)[Docker-Compose] Starting lab using $(CHOICE)$(NO_COLOR)"
-	@docker-compose -f docker-compose-core.yaml -f docker-compose-$(CHOICE).yaml up -d
+# Backend selection uses native Docker Compose profiles.
+# CHOICE = lgtm | signoz | greptimedb | victoriastack
+# You can also skip make entirely:
+#   docker compose --profile lgtm --profile apps up -d
+#   COMPOSE_PROFILES=lgtm,apps docker compose up -d
 
-.PHONY: stop-observability
-stop-observability: guard-CHOICE ## Stop the observability stack
-	@echo -e "$(INFO)$(INFO_COLOR)[Docker-Compose] Stopping lab using $(CHOICE) $(NO_COLOR)"
-	@docker-compose -f docker-compose-core.yaml -f docker-compose-$(CHOICE).yaml down --remove-orphans
+.PHONY: up
+up: guard-CHOICE ## Start a backend + apps (CHOICE=lgtm|signoz|greptimedb|victoriastack)
+	@echo -e "$(INFO)$(INFO_COLOR)[Compose] Starting lab: $(CHOICE) + apps$(NO_COLOR)"
+	@docker compose --profile $(CHOICE) --profile apps up -d
 
-.PHONY: logs-observability
-logs-observability: guard-CHOICE guard-SERVICE ## Display logs of observability stack
-	@echo -e "$(INFO)$(INFO_COLOR)[Docker-Compose] Display logs using $(CHOICE) $(SERVICE)$(NO_COLOR)"
-	@docker-compose -f docker-compose-core.yaml -f docker-compose-$(CHOICE).yaml logs -f $(SERVICE)
+.PHONY: down
+down: ## Stop everything (all profiles)
+	@echo -e "$(INFO)$(INFO_COLOR)[Compose] Stopping lab$(NO_COLOR)"
+	@docker compose down --remove-orphans
 
-.PHONY: start-apps
-start-apps: ## ## Start the applications
-	@echo -e "$(INFO)$(INFO_COLOR)[Docker-Compose] Starting applications $(NO_COLOR)"
-	@docker-compose -f docker-compose-core.yaml -f docker-compose-apps.yaml up -d
+.PHONY: logs
+logs: guard-SERVICE ## Tail logs of a service (SERVICE=otel-go)
+	@echo -e "$(INFO)$(INFO_COLOR)[Compose] Logs: $(SERVICE)$(NO_COLOR)"
+	@docker compose logs -f $(SERVICE)
 
-.PHONY: stop-apps
-stop-apps: ## Stop the applications
-	@echo -e "$(INFO)$(INFO_COLOR)[Docker-Compose] Stopping applications $(NO_COLOR)"
-	@docker-compose -f docker-compose-core.yaml -f docker-compose-apps.yaml down --remove-orphans
-
-.PHONY: logs-apps
-logs-apps: guard-SERVICE ## Display logs of the application
-@echo -e "$(INFO)$(INFO_COLOR)[Docker-Compose] Display logs application: $(SERVICE) $(NO_COLOR)"
-	@docker-compose -f docker-compose-core.yaml -f docker-compose-apps.yaml logs -f $(SERVICE)
+.PHONY: ps
+ps: ## List running services
+	@docker compose ps
 
 .PHONE: d2-build
 d2-build: ## Generate architecture diagram
