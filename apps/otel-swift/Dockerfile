@@ -34,12 +34,10 @@ RUN swift package clean
 # Update build hash in application version constant.
 # RUN commit=$(git rev-parse --short HEAD) && sed -i -e "s/buildx/$commit/g" Sources/App/Utilities/Constants.swift
 
-# Build everything, with optimizations, with static linking, and using jemalloc
-# N.B.: The static version of jemalloc is incompatible with the static Swift runtime.
-# RUN swift build -c release \
-#                 --static-swift-stdlib \
-#                 -Xlinker -ljemalloc
-RUN swift build -c release
+# Build everything, with optimizations and a statically linked Swift runtime.
+# N.B.: The static version of jemalloc is incompatible with the static Swift runtime,
+# so jemalloc is not linked here even though libjemalloc-dev is available.
+RUN swift build -c release --static-swift-stdlib
 
 # Switch to the staging area
 WORKDIR /staging
@@ -72,7 +70,7 @@ RUN export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true \
       ca-certificates \
       tzdata \
 # If your app or its dependencies import FoundationNetworking, also install `libcurl4`.
-      # libcurl4 \
+      libcurl4 \
 # If your app or its dependencies import FoundationXML, also install `libxml2`.
       # libxml2 \
     && rm -r /var/lib/apt/lists/*
