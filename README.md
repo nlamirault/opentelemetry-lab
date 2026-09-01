@@ -26,29 +26,53 @@ You could choose which Observability stack you want to use:
 - ✅ greptimedb: GreptimeDB
 - ✅ victoriastack: VictoriaMetrics, VictoriaLogs, VictoriaTraces
 
-### Start Observability stack
+Everything lives in a single `compose.yaml` driven by native
+[Docker Compose profiles](https://docs.docker.com/compose/how-tos/profiles/).
+One profile per backend (`lgtm`, `signoz`, `greptimedb`, `victoriastack`) plus
+an `apps` profile for the instrumented applications. Backends are mutually
+exclusive — each binds the OTLP ports `4317`/`4318`, so run only one at a time.
+The active backend's collector claims the `otel-collector` network alias, so
+applications always target `http://otel-collector:4317` regardless of backend.
+
+### Start a backend + applications
 
 ```shell
-make start-observability CHOICE=xxx
+# native docker compose (no make)
+docker compose --profile lgtm --profile apps up -d
+
+# or persist the selection in a .env file
+echo "COMPOSE_PROFILES=lgtm,apps" > .env
+docker compose up -d
 ```
 
-### Start Applications
+Swap `lgtm` for `signoz`, `greptimedb`, or `victoriastack` to change backend.
+
+### Everyday commands
 
 ```shell
-make start-apps
+docker compose ps                     # what's running
+docker compose logs -f otel-go        # tail one service
+docker compose up -d otel-go          # (re)start one service
+docker compose down --remove-orphans  # stop everything
 ```
 
-### `make start-apps` vs `make run`
+### Make shortcuts (optional)
 
-These two targets serve different purposes:
+```shell
+make up CHOICE=lgtm       # backend + apps
+make logs SERVICE=otel-go # tail a service
+make ps                   # list services
+make down                 # stop everything
+```
 
-- **`make start-apps`** — runs the full application stack with Docker Compose,
-  layering `docker-compose-core.yaml` (which defines the shared
-  `opentelemetry-lab` network and core services such as the OpenTelemetry
-  Collector) with `docker-compose-apps.yaml`. Containers are started detached
-  (`-d`), joined to the shared network, and their ports are published to the
-  host, so endpoints like `http://127.0.0.1:9191/health` are reachable. This is
-  the way to actually exercise an application and see its telemetry flow to the
+### `docker compose up` vs `make run`
+
+- **`docker compose --profile <backend> --profile apps up -d`** — runs the full
+  stack: the shared `opentelemetry-lab` network, the selected backend, the
+  OpenTelemetry Collector, and the applications. Containers are detached (`-d`),
+  joined to the shared network, and their ports published to the host, so
+  endpoints like `http://127.0.0.1:9191/health` are reachable. This is the way
+  to actually exercise an application and see its telemetry flow to the
   collector.
 
 - **`make run APP=<app>`** — builds and launches a single application image on
@@ -56,9 +80,6 @@ These two targets serve different purposes:
   publish any ports, or start the collector. It is only a build-and-boot smoke
   test to confirm the image compiles and the server starts; the app is not
   reachable from the host and has nothing to export telemetry to.
-
-Use `make start-apps` for real usage; use `make run` only to quickly validate a
-single app's image.
 
 ## Port Mapping
 
@@ -83,7 +104,7 @@ single app's image.
 | 8888        | 8888           | otel-go     | Go application with OpenTelemetry         |
 | 9999        | 9999           | otel-rust   | Rust application with OpenTelemetry       |
 
-### LGTM Stack (docker-compose-lgtm.yaml)
+### LGTM Backend (profile: lgtm)
 
 | Public Port | Container Port | Service    | Description                             |
 | ----------- | -------------- | ---------- | --------------------------------------- |
@@ -94,7 +115,7 @@ single app's image.
 | 3418        | 4318           | Tempo      | OTLP HTTP receiver for traces           |
 | 3097        | 9097           | Pyroscope  | Continuous profiling                    |
 
-### GreptimeDB Stack (docker-compose-greptimedb.yaml)
+### GreptimeDB Backend (profile: greptimedb)
 
 | Public Port | Container Port | Service   | Description                     |
 | ----------- | -------------- | --------- | ------------------------------- |
@@ -111,7 +132,7 @@ single app's image.
 | 4005        | 4005           | flownode0 | GreptimeDB flow node HTTP API   |
 | 4007        | 5000           | datanode0 | GreptimeDB data node HTTP API   |
 
-### SigNoz Stack (docker-compose-signoz.yaml)
+### SigNoz Backend (profile: signoz)
 
 | Public Port | Container Port | Service    | Description           |
 | ----------- | -------------- | ---------- | --------------------- |
@@ -122,7 +143,7 @@ single app's image.
 | 5000        | 9000           | ClickHouse | Native TCP interface  |
 | 5181        | 9181           | ClickHouse | Interserver HTTP port |
 
-### Victoria Stack (docker-compose-victoriastack.yaml)
+### Victoria Backend (profile: victoriastack)
 
 | Public Port | Container Port | Service         | Description                             |
 | ----------- | -------------- | --------------- | --------------------------------------- |
