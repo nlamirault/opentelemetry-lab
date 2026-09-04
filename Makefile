@@ -64,10 +64,15 @@ run: guard-APP ## Launch Docker image
 #   docker compose --profile lgtm --profile apps up -d
 #   COMPOSE_PROFILES=lgtm,apps docker compose up -d
 
-.PHONY: up
-up: guard-CHOICE ## Start a backend + apps (CHOICE=lgtm|signoz|greptimedb|victoriastack)
-	@echo -e "$(INFO)$(INFO_COLOR)[Compose] Starting lab: $(CHOICE) + apps$(NO_COLOR)"
-	@docker compose --profile $(CHOICE) --profile apps up -d
+.PHONY: up-otel
+up-otel: guard-CHOICE ## Start a backend + apps (CHOICE=lgtm|signoz|greptimedb|victoriastack)
+	@echo -e "$(INFO)$(INFO_COLOR)[Compose] Starting lab: $(CHOICE)$(NO_COLOR)"
+	@docker compose --profile $(CHOICE) up -d
+
+.PHONY: up-apps
+up-apps:
+	@echo -e "$(INFO)$(INFO_COLOR)[Compose] Starting lab: apps$(NO_COLOR)"
+	@docker compose --profile apps up -d
 
 .PHONY: down
 down: ## Stop everything (all profiles)
