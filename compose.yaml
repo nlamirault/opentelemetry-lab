@@ -259,8 +259,8 @@ services:
     ports:
     - "4317:4317" # OTLP gRPC receiver
     - "4318:4318" # OTLP http receiver
-    - "8888:8888"
-    - "8889:8889"
+    - "8890:8888" # collector self-telemetry (host 8890; 8888 owned by otel-go)
+    - "8889:8889" # Prometheus metrics exporter (scraped in-network)
     environment:
     - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://loki:3100/otlp
     - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://prometheus:9090/api/v1/otlp
