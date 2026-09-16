@@ -12,7 +12,15 @@ storage:
     # A 10min time window is enough because it can easily absorb retries and network delays.
     out_of_order_time_window: 10m
 
-scrape_configs:
-- job_name: aggregated-trace-metrics
-  static_configs:
-  - targets: ['otel-collector:8889']
+# App and collector metrics arrive via OTLP remote-write (--web.enable-otlp-receiver),
+# pushed by the collector's otlp_http/metrics exporter — no scraping required.
+#
+# The scrape job below is only for span-derived metrics (spanmetrics connector +
+# prometheus exporter on :8889). Both are currently disabled in the collector config
+# (etc/otel/otel-collector-*.yaml). Re-enable that pipeline before uncommenting, else
+# the target stays down with "connection refused" on :8889.
+#
+# scrape_configs:
+# - job_name: aggregated-trace-metrics
+#   static_configs:
+#   - targets: ['otel-collector:8889']
