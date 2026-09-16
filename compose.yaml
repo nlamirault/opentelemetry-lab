@@ -171,7 +171,7 @@ services:
     - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
     - OTEL_SERVICE_NAME=otel-rust
     - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=otel-rust,service.criticality=medium,service.version=v1.0.0
-    # command: "otel-rust"
+  # command: "otel-rust"
 
   otel-go:
     <<: *common
@@ -188,7 +188,7 @@ services:
     - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
     - OTEL_SERVICE_NAME=otel-go
     - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=otel-go,service.criticality=medium,service.version=v1.0.0
-    # command: "otel-go"
+  # command: "otel-go"
 
   otel-swift:
     <<: *common
@@ -330,7 +330,7 @@ services:
   grafana-lgtm:
     <<: *common
     profiles: [lgtm]
-    image: grafana/grafana:12.4.0
+    image: grafana/grafana:13.2.1
     container_name: grafana
     volumes:
     - ./etc/grafana/dashboards-lgtm.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
