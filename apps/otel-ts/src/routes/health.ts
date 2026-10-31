@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
-import { getLogger } from "../otel/logging";
+import { logger } from "../logger";
 
 export async function registerHealthRoutes(
   fastify: FastifyInstance,
@@ -10,11 +10,7 @@ export async function registerHealthRoutes(
   fastify.get(
     "/health",
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const logger = getLogger();
-      logger.emit({
-        severityText: "info",
-        body: "Health handler",
-      });
+      logger.info("Health handler");
       return reply.send({ status: "ok" });
     },
   );

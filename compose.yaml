@@ -223,7 +223,6 @@ services:
     - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
     - OTEL_SERVICE_NAME=otel-ts
     - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=otel-ts,service.criticality=medium,service.version=v1.0.0
-    command: "node --require '@opentelemetry/auto-instrumentations-node/register' dist/index.js"
 
   otel-react:
     <<: *common
