@@ -1,6 +1,6 @@
 module github.com/nlamirault/otel-go
 
-go 1.25.0
+go 1.26.0
 
 //toolchain go1.24.5
 
