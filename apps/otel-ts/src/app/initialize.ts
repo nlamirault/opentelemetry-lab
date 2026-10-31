@@ -2,20 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import Fastify, { FastifyInstance } from "fastify";
-import { FastifyOtelInstrumentation } from "@fastify/otel";
 
 import { logger } from "../logger";
 import { registerRoutes } from "../routes";
 import { getLogger } from "../otel/logging";
 
 export async function initializeApp(): Promise<FastifyInstance> {
+  // The @fastify/otel plugin is registered on creation by the SDK
+  // (registerOnInitialization in src/instrumentation.ts).
   const fastify = Fastify({ logger: false });
-
-  // Register Fastify OpenTelemetry plugin
-  const fastifyOtelInstrumentation = new FastifyOtelInstrumentation({
-    servername: "otel-ts",
-  });
-  await fastify.register(fastifyOtelInstrumentation.plugin());
 
   await registerRoutes(fastify);
 
