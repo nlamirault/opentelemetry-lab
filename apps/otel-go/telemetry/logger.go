@@ -30,7 +30,7 @@ func InitLogger(ctx context.Context, resource *resource.Resource, serviceName st
 		sdklog.WithProcessor(sdklog.NewBatchProcessor(exporter)),
 		sdklog.WithResource(resource),
 	}
-	if os.Getenv(ENV_OTEL_DEBUG) != "" {
+	if os.Getenv(envOTelDebug) != "" {
 		stdoutExporter, err := stdoutlog.New()
 		if err != nil {
 			return nil, err

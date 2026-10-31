@@ -4,16 +4,22 @@
 package handlers
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-type MetricsHandler struct{}
+type MetricsHandler struct {
+	handler http.Handler
+}
 
 func NewMetricsHandler() *MetricsHandler {
-	return &MetricsHandler{}
+	return &MetricsHandler{
+		handler: promhttp.Handler(),
+	}
 }
 
 func (h *MetricsHandler) Metrics(ctx *gin.Context) {
-	promhttp.Handler().ServeHTTP(ctx.Writer, ctx.Request)
+	h.handler.ServeHTTP(ctx.Writer, ctx.Request)
 }

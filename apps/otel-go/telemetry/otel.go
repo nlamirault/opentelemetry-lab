@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	ENV_OTEL_DEBUG = "OTEL_DEBUG"
+	envOTelDebug = "OTEL_DEBUG"
 )
 
 func CreateResource(ctx context.Context, serviceName string) (*sdkresource.Resource, error) {

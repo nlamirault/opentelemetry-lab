@@ -36,7 +36,7 @@ func InitMeter(ctx context.Context, resource *resource.Resource) (*sdkmetric.Met
 		sdkmetric.WithReader(reader),
 		sdkmetric.WithReader(promExporter),
 	}
-	if os.Getenv(ENV_OTEL_DEBUG) != "" {
+	if os.Getenv(envOTelDebug) != "" {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 		stdoutExporter, err := stdoutmetric.New(

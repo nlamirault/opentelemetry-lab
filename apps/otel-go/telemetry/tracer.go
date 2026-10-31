@@ -28,7 +28,7 @@ func InitTracer(ctx context.Context, resource *resource.Resource) (*sdktrace.Tra
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(resource),
 	}
-	if os.Getenv(ENV_OTEL_DEBUG) != "" {
+	if os.Getenv(envOTelDebug) != "" {
 		stdoutExporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
 		if err != nil {
 			return nil, err

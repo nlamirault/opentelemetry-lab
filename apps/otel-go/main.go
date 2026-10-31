@@ -21,35 +21,8 @@ import (
 func main() {
 	ctx := context.Background()
 
-	// logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
-	// 	AddSource: true,
-	// 	Level:     slog.LevelDebug,
-	// }))
-	// slog.SetDefault(logger)
-
-	// log.SetOutput(os.Stderr)
-	// if os.Getenv("DEBUG") == "true" {
-	// 	slog.SetLogLoggerLevel(slog.LevelDebug)
-	// }
-
-	// logger := slog.New(
-	// 	slogformatter.NewFormatterHandler(
-	// 		slogformatter.TimezoneConverter(time.UTC),
-	// 		slogformatter.TimeFormatter(time.RFC3339, nil),
-	// 		slogformatter.HTTPRequestFormatter(false),
-	//     	slogformatter.HTTPResponseFormatter(false),
-	// 	)(
-	// 		// slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{}),
-	// 		slog.NewJSONHandler(os.Stdout, nil),
-	// 	),
-	// )
-
-	// // Add an attribute to all log entries made through this logger.
-	// logger = logger.With("gin_mode", gin.EnvGinMode)
-
 	serviceName := "otel-go"
 	if os.Getenv("OTEL_SERVICE_NAME") != "" {
-		// slog.Info("Use OTEL_SERVICE_NAME variable")
 		serviceName = os.Getenv("OTEL_SERVICE_NAME")
 	}
 

@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - errorlint
+    - misspell
+  settings:
+    staticcheck:
+      # golangci-lint defaults, with ST1003 (naming conventions) enabled.
+      checks:
+        - all
+        - -ST1000
+        - -ST1016
+        - -ST1020
+        - -ST1021
+        - -ST1022
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/nlamirault/otel-go
