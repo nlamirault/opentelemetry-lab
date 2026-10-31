@@ -53,22 +53,12 @@ func main() {
 		serviceName = os.Getenv("OTEL_SERVICE_NAME")
 	}
 
-	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-	if endpoint == "" {
-		log.Fatal("OpenTelemetry endpoint not specified")
-	}
-
-	protocol := os.Getenv("OTEL_EXPORTER_OTLP_PROTOCOL")
-	if protocol == "" {
-		log.Fatal("OpenTelemetry protocol not specified")
-	}
-
 	resource, err := telemetry.CreateResource(ctx, serviceName)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	lp, err := telemetry.InitLogger(ctx, resource, serviceName, endpoint, protocol)
+	lp, err := telemetry.InitLogger(ctx, resource, serviceName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -78,7 +68,7 @@ func main() {
 		}
 	}()
 
-	tp, err := telemetry.InitTracer(ctx, resource, endpoint, protocol)
+	tp, err := telemetry.InitTracer(ctx, resource)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -88,7 +78,7 @@ func main() {
 		}
 	}()
 
-	mp, err := telemetry.InitMeter(ctx, resource, endpoint, protocol)
+	mp, err := telemetry.InitMeter(ctx, resource)
 	if err != nil {
 		log.Fatal(err)
 	}

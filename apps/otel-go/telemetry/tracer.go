@@ -5,59 +5,37 @@ package telemetry
 
 import (
 	"context"
-	"fmt"
 	"os"
 
+	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-func InitTracer(ctx context.Context, resource *resource.Resource, otlpEndpoint string, protocol string) (*sdktrace.TracerProvider, error) {
-	var otlpExporter sdktrace.SpanExporter
-	var err error
-	switch protocol {
-	case "http":
-		otlpExporter, err = otlptracehttp.New(
-			ctx,
-			otlptracehttp.WithEndpointURL(fmt.Sprintf("%s/v1/traces", otlpEndpoint)))
-		if err != nil {
-			return nil, err
-		}
-	case "grpc":
-		otlpExporter, err = otlptracegrpc.New(ctx,
-			otlptracegrpc.WithEndpointURL(otlpEndpoint))
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, fmt.Errorf("unsupported protocol: %s", protocol)
+// InitTracer configures the exporter from the OTEL_TRACES_EXPORTER and
+// OTEL_EXPORTER_OTLP_* environment variables, and the sampler from
+// OTEL_TRACES_SAMPLER.
+func InitTracer(ctx context.Context, resource *resource.Resource) (*sdktrace.TracerProvider, error) {
+	exporter, err := autoexport.NewSpanExporter(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	var provider *sdktrace.TracerProvider
+	opts := []sdktrace.TracerProviderOption{
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource),
+	}
 	if os.Getenv(ENV_OTEL_DEBUG) != "" {
 		stdoutExporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
 		if err != nil {
 			return nil, err
 		}
-
-		provider = sdktrace.NewTracerProvider(
-			sdktrace.WithSampler(sdktrace.AlwaysSample()),
-			sdktrace.WithBatcher(otlpExporter),
-			sdktrace.WithBatcher(stdoutExporter),
-			sdktrace.WithResource(resource),
-		)
-	} else {
-		provider = sdktrace.NewTracerProvider(
-			sdktrace.WithSampler(sdktrace.AlwaysSample()),
-			sdktrace.WithBatcher(otlpExporter),
-			sdktrace.WithResource(resource),
-		)
+		opts = append(opts, sdktrace.WithBatcher(stdoutExporter))
 	}
+	provider := sdktrace.NewTracerProvider(opts...)
 
 	otel.SetTracerProvider(provider)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))

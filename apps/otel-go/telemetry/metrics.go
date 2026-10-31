@@ -8,7 +8,9 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+
+	"github.com/nlamirault/otel-go/version"
 )
 
 const (
@@ -27,7 +29,7 @@ func InitBuildInfo(ctx context.Context, meterProvider *sdkmetric.MeterProvider, 
 	buildInfo.Add(ctx, 1, metric.WithAttributes(
 		semconv.TelemetrySDKLanguageGo,
 		semconv.ServiceName(serviceName),
-		semconv.ServiceVersion("v1.0.0"),
+		semconv.ServiceVersion(version.Version),
 	))
 
 	return nil
