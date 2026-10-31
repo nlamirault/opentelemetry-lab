@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 // SPDX-License-Identifier: Apache-2.0
 
+import { format as formatArgs } from "node:util";
 import { createLogger as winstonCreateLogger, format, transports } from "winston";
 import type { Logger } from "winston";
 
@@ -14,24 +15,30 @@ export function initializeLogger(): Logger {
       // version: env.package.version,
       component: "server",
     },
-    format: format.combine(
-      format.timestamp(),
-      format.metadata(),
-      format.errors({ stack: true }),
-    ),
+    // errors() must run at the logger level: transports only get a copy of
+    // the Error, without its non-enumerable message and stack.
+    format: format.errors({ stack: true }),
+    // timestamp() and metadata() live on the Console transport so the
+    // OpenTelemetry transport, added by the winston instrumentation, gets
+    // flat attributes.
     transports: [
       new transports.Console({
-        format: format.json(),
+        format: format.combine(
+          format.timestamp(),
+          format.metadata(),
+          format.json(),
+        ),
       }),
     ],
   });
 
-  console.log = (...args: any[]) => logger.info.apply(logger, args as any);
-  console.info = (...args: any[]) => logger.info.call(logger, args as any);
-  console.warn = (...args: any[]) => logger.warn.call(logger, args as any);
-  console.error = (...args: any[]) => logger.error.call(logger, args as any);
-  // eslint-disable-next-line no-console
-  console.debug = (...args: any[]) => logger.debug.call(logger, args as any);
+  // Format arguments like the native console does (OpenTelemetry diag
+  // output goes through here too).
+  console.log = (...args: unknown[]) => logger.info(formatArgs(...args));
+  console.info = (...args: unknown[]) => logger.info(formatArgs(...args));
+  console.warn = (...args: unknown[]) => logger.warn(formatArgs(...args));
+  console.error = (...args: unknown[]) => logger.error(formatArgs(...args));
+  console.debug = (...args: unknown[]) => logger.debug(formatArgs(...args));
 
   setLogger(logger);
 

@@ -2,17 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
-import { getLogger } from "../otel/logging";
+import { logger } from "../logger";
 
 export async function registerRootRoutes(
   fastify: FastifyInstance,
 ): Promise<void> {
   fastify.get("/", async (request: FastifyRequest, reply: FastifyReply) => {
-    const logger = getLogger();
-    logger.emit({
-      severityText: "info",
-      body: "Root handler",
-    });
+    logger.info("Root handler");
     return reply.send("OpenTelemetry Lab / Typescript");
   });
 }

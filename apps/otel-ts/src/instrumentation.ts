@@ -43,7 +43,10 @@ export const sdk = new NodeSDK({
     containerDetector,
   ],
   instrumentations: [
-    getNodeAutoInstrumentations(),
+    getNodeAutoInstrumentations({
+      // fastify binds to 0.0.0.0: skip that lookup, a lone root span at startup.
+      "@opentelemetry/instrumentation-dns": { ignoreHostnames: ["0.0.0.0"] },
+    }),
     new FastifyOtelInstrumentation({ registerOnInitialization: true }),
   ],
 });

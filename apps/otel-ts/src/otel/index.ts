@@ -1,6 +1,4 @@
 // SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 // SPDX-License-Identifier: Apache-2.0
 
-export { getLogger } from "./logging";
-
 export { createBuildInfoMetric } from "./meter";
