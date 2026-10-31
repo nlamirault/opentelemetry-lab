@@ -1,64 +1,71 @@
 # SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 # SPDX-License-Identifier: Apache-2.0
 
+import asyncio
+import contextlib
 import logging
+import threading
+from collections.abc import AsyncIterator, Callable, Sequence
 
 import fastapi
-import prometheus_client
-from fastapi import exceptions, responses
-from opentelemetry import trace
+import httpx
 from opentelemetry.instrumentation import fastapi as otel_fastapi
-from opentelemetry.instrumentation import httpx as otel_httpx
-from opentelemetry.instrumentation import system_metrics as otel_system_metrics
 
+from otelpython import constants
 from otelpython import version as app_version
-from otelpython.api import chain, health, root, version
+from otelpython.api import chain, health, metrics, root, version
+
+logger = logging.getLogger(__name__)
 
 
-def creates_app(service_name: str) -> fastapi.FastAPI:
+def create_app(service_name: str, shutdown_hooks: Sequence[Callable[[], object]] = ()) -> fastapi.FastAPI:
     """Create the application
+
+    Args:
+        service_name: the title of the application
+        shutdown_hooks: called in order when the application stops, to flush the telemetry
 
     Returns:
         [fastapi.FastAPI]: the main application
     """
 
-    logging.info("Create application %s", app_version.version_info)
-    app = fastapi.FastAPI(version=app_version.version_info, title=service_name)
+    @contextlib.asynccontextmanager
+    async def lifespan(app: fastapi.FastAPI) -> AsyncIterator[None]:
+        async with httpx.AsyncClient() as client:
+            app.state.http_client = client
+            yield
+        await _run_shutdown_hooks(shutdown_hooks)
+
+    logger.info("Create application %s", app_version.version_info)
+    app = fastapi.FastAPI(version=app_version.version_info, title=service_name, lifespan=lifespan)
     app.include_router(root.router)
     app.include_router(health.router)
-    # app.include_router(metrics.router)
+    app.include_router(metrics.router)
     app.include_router(version.router)
     app.include_router(chain.router)
-    _setup_auto_instrumentation(app)
-    # Add Prometheus ASGI app directly at /metrics
-    app.mount("/metrics", prometheus_client.make_asgi_app())
+    otel_fastapi.FastAPIInstrumentor.instrument_app(
+        app,
+        excluded_urls=",".join(constants.UNTRACED_PATHS),
+        # One span per request, without the internal spans of each ASGI event.
+        exclude_spans=["receive", "send"],
+    )
     return app
 
 
-def add_otel_exception_handler(app: fastapi.FastAPI) -> None:
-    @app.exception_handler(exceptions.HTTPException)
-    async def http_exception_handler(
-        request: fastapi.Request,
-        exc: exceptions.HTTPException,
-    ) -> responses.JSONResponse:
-        current_span = trace.get_current_span()
-        current_span.set_attributes(
-            {
-                # "span_status": "ERROR",
-                "http.status_text": str(exc.detail),
-                "otel.status_description": f"{exc.status_code} / {exc.detail}",
-                "otel.status_code": "ERROR",
-            }
-        )
-        # current_span.add_event("Test")
-        current_span.record_exception(exc)
-        return responses.JSONResponse(status_code=exc.status_code, content={"detail": str(exc.detail)})
+async def _run_shutdown_hooks(hooks: Sequence[Callable[[], object]]) -> None:
+    """Runs the hooks in order, for SHUTDOWN_TIMEOUT_SECONDS at most.
 
+    When the collector is down, each exporter retries for OTEL_EXPORTER_OTLP_TIMEOUT
+    (10s by default), which would exceed the grace period of the container runtime.
+    """
 
-def _setup_auto_instrumentation(app: fastapi.FastAPI) -> None:
-    """Set up automatic instrumentation for libraries."""
+    def run_hooks() -> None:
+        for hook in hooks:
+            hook()
 
-    otel_fastapi.FastAPIInstrumentor.instrument_app(app)
-    otel_httpx.HTTPXClientInstrumentor().instrument()
-    otel_system_metrics.SystemMetricsInstrumentor().instrument()
-    # AsyncPGInstrumentor().instrument()
+    # A daemon thread, so that a hook still running does not block the exit.
+    thread = threading.Thread(target=run_hooks, name="shutdown-hooks", daemon=True)
+    thread.start()
+    await asyncio.to_thread(thread.join, constants.SHUTDOWN_TIMEOUT_SECONDS)
+    if thread.is_alive():
+        logger.warning("Shutdown hooks timed out after %ss", constants.SHUTDOWN_TIMEOUT_SECONDS)

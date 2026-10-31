@@ -2,57 +2,43 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
-import os
 
 from opentelemetry import metrics
 from opentelemetry.exporter import prometheus
 from opentelemetry.exporter.otlp.proto.grpc import metric_exporter as metric_exporter_grpc
-from opentelemetry.exporter.otlp.proto.grpc import metric_exporter as metric_exporter_http
+from opentelemetry.exporter.otlp.proto.http import metric_exporter as metric_exporter_http
 from opentelemetry.sdk import metrics as sdk_metrics
 from opentelemetry.sdk import resources
 from opentelemetry.sdk.metrics import export
 
-from otelpython import exceptions, settings
+from otelpython import settings
+from otelpython.telemetry import otel
 
 logger = logging.getLogger(__name__)
 
-prefix = "otel_python"
 
-
-def setup(resource: resources.Resource, otlp_endpoint: str, otlp_protocol: str) -> metrics.Meter:
-    logging.info("Setup OpenTelemetry Meter")
-
-    otlp_metric_exporter = None
-    if otlp_protocol == "http":
-        otlp_metric_exporter = metric_exporter_http.OTLPMetricExporter(
-            endpoint=f"{otlp_endpoint}/v1/metrics", insecure=True
-        )
-    elif otlp_protocol == "grpc":
-        otlp_metric_exporter = metric_exporter_grpc.OTLPMetricExporter(endpoint=otlp_endpoint, insecure=True)
+def setup(resource: resources.Resource) -> sdk_metrics.MeterProvider:
+    """Sets the global meter provider. The export interval comes from OTEL_METRIC_EXPORT_INTERVAL."""
+    otlp_metric_exporter: export.MetricExporter
+    if otel.otlp_protocol("metrics") == "grpc":
+        otlp_metric_exporter = metric_exporter_grpc.OTLPMetricExporter()
     else:
-        raise exceptions.OpenTelemetryProtocolException(f"invalid OpenTelemetry protocol: {otlp_protocol}")
-    logger.info("OTLP metrics configured")
+        otlp_metric_exporter = metric_exporter_http.OTLPMetricExporter()
 
-    metrics_readers = []
+    metric_readers: list[export.MetricReader] = [
+        export.PeriodicExportingMetricReader(otlp_metric_exporter),
+        # Served on /metrics, see api/metrics.py.
+        prometheus.PrometheusMetricReader(),
+    ]
+    if settings.OTEL_DEBUG:
+        metric_readers.append(export.PeriodicExportingMetricReader(export.ConsoleMetricExporter()))
 
-    logger.info("Add the OTLP metric experter")
-    otlp_reader = export.PeriodicExportingMetricReader(otlp_metric_exporter)
-    metrics_readers.append(otlp_reader)
-
-    if os.getenv("OTEL_ENABLE_CONSOLE", "false").lower() == "true":
-        logger.info("Add the Console metric experter")
-        console_metric_exporter = export.ConsoleMetricExporter()
-        console_reader = export.PeriodicExportingMetricReader(console_metric_exporter)
-        metrics_readers.append(console_reader)
-        # logger.info("Console metrics enabled")
-
-    logger.info("Add the Prometheus experter")
-    prom_reader = prometheus.PrometheusMetricReader(prefix)
-    metrics_readers.append(prom_reader)
-
-    meter_provider = sdk_metrics.MeterProvider(resource=resource, metric_readers=metrics_readers)
-
+    # The application lifespan shuts the provider down, see application.create_app.
+    meter_provider = sdk_metrics.MeterProvider(
+        resource=resource,
+        metric_readers=metric_readers,
+        shutdown_on_exit=False,
+    )
     metrics.set_meter_provider(meter_provider)
     logger.info("OpenTelemetry metrics initialized")
-    meter = metrics.get_meter(settings.OTEL_SERVICE_NAME)
-    return meter
+    return meter_provider

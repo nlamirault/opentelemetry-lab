@@ -1,38 +1,36 @@
 # SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 # SPDX-License-Identifier: Apache-2.0
 
-# Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS build
 
-# Install the project into `/app`
 WORKDIR /app
 
-# Enable bytecode compilation
-ENV UV_COMPILE_BYTECODE=1
+# Compile the bytecode, copy from the cache mount instead of linking, and use
+# the Python of the image, which is the one of the runtime image.
+ENV UV_COMPILE_BYTECODE=1 \
+  UV_LINK_MODE=copy \
+  UV_PYTHON_DOWNLOADS=0
 
-# Copy from the cache instead of linking since it's a mounted volume
-ENV UV_LINK_MODE=copy
-
-# Install the project's dependencies using the lockfile and settings
+# Install the dependencies first, so that they are cached across source changes.
 RUN --mount=type=cache,target=/root/.cache/uv \
   --mount=type=bind,source=uv.lock,target=uv.lock \
   --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-  uv sync --frozen --no-install-project --no-dev
-RUN uv run opentelemetry-bootstrap -a install
+  uv sync --locked --no-install-project --no-dev
 
-# Then, add the rest of the project source code and install it
-ADD . /app
+# Install the project as a package: the runtime image only needs the virtualenv.
+COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
-  uv sync --frozen --no-dev
+  uv sync --locked --no-dev --no-editable
 
+FROM python:3.12-slim-bookworm
+
+# Same uid as the distroless nonroot user of the other lab images.
+RUN groupadd --system --gid 65532 nonroot \
+  && useradd --system --uid 65532 --gid nonroot --no-create-home nonroot
+
+COPY --from=build --chown=nonroot:nonroot /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Reset the entrypoint, don't invoke `uv`
-ENTRYPOINT []
-
-# CMD ["fastapi", "dev", "--host", "0.0.0.0", "app.py"]
-CMD [ \
-  "opentelemetry-instrument", \
-  "uvicorn", "main:app", \
-  # "--reload", "--reload-dir", "./" , \
-  "--host", "0.0.0.0", "--port", "8000"]
+USER nonroot
+EXPOSE 8000
+CMD ["otelpython"]

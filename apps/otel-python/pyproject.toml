@@ -4,54 +4,52 @@
 [project]
 name = "otel-python"
 version = "1.0.0"
-description = "Add your description here"
+description = "OpenTelemetry Lab application in Python, with FastAPI"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-  "fastapi==0.115.0",
-  "httpx>=0.27.2",
-  "opentelemetry-api==1.37.0",
-  "opentelemetry-distro==0.58b0",
-  "opentelemetry-exporter-otlp==1.37.0",
-  "opentelemetry-exporter-prometheus==0.58b0",
-  "opentelemetry-instrumentation-fastapi==0.58b0",
-  "opentelemetry-instrumentation-logging==0.58b0",
-  "opentelemetry-instrumentation-httpx==0.58b0",
-  "opentelemetry-sdk==1.37.0",
-  "prometheus-client==0.22.1",
-  "python-json-logger>=2.0.7",
-  "uvicorn==0.31.0",
-  "opentelemetry-instrumentation-system-metrics>=0.58b0",
+  "fastapi==0.162.0",
+  "httpx==0.28.1",
+  "opentelemetry-api==1.45.2",
+  "opentelemetry-exporter-otlp==1.45.2",
+  "opentelemetry-exporter-prometheus==0.66b2",
+  "opentelemetry-instrumentation-fastapi==0.66b2",
+  "opentelemetry-instrumentation-logging==0.66b2",
+  "opentelemetry-instrumentation-httpx==0.66b2",
+  "opentelemetry-sdk==1.45.2",
+  "prometheus-client==0.26.0",
+  "python-json-logger==4.2.0",
+  "uvicorn==0.54.0",
+  "opentelemetry-instrumentation-system-metrics==0.66b2",
 ]
 
 [project.scripts]
-otelpython = "main:run"
+otelpython = "otelpython.main:run"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["main.py"]
+packages = ["otelpython"]
 
-[project.optional-dependencies]
-test = [
-  "pytest>=7.4.0",
-  "pytest-lazy-fixtures>=1.1.2",
-  "pytest-asyncio>=0.26.0",
-  "trio>=0.30.0",
+[dependency-groups]
+dev = [
+  "mypy==2.4.1",
+  "pytest==9.2.0",
+  "ruff==0.17.3",
 ]
-dev = ["shiv>=1.0.4", "ruff>=0.11.8"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-python_files = "test_*.py"
-python_classes = "Test*"
-python_functions = "test_*"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["otelpython", "tests"]
 
 [tool.ruff]
-# Assuming Python 3.10 as the target
-target-version = "py310"
+target-version = "py312"
 line-length = 120
 
 [tool.ruff.lint]
@@ -63,47 +61,19 @@ select = [
   "C4",  # flake8-comprehensions
   "UP",  # pyupgrade
   "SIM", # flake8-simplify
-  "TCH", # flake8-type-checking
+  "TC",  # flake8-type-checking
   "W",   # pycodestyle warnings
   "RUF", # Ruff-specific rules
 ]
 ignore = [
-  "E203", # Whitespace before ':' (conflicts with Black)
-  # Docstring rules corresponding to D100-D107
-  "D100",   # Missing docstring in public module
-  "D101",   # Missing docstring in public class
-  "D102",   # Missing docstring in public method
-  "D103",   # Missing docstring in public function
-  "D104",   # Missing docstring in public package
-  "D105",   # Missing docstring in magic method
-  "D106",   # Missing docstring in public nested class
-  "D107",   # Missing docstring in __init__
-  "SIM117", # nested with
-  "B008",   # Allow Depends(...) in default arguments
-  "E501",   # line too long
+  "E501", # line too long, handled by the formatter
 ]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/**/*" = ["D", "S"] # Ignore docstring and security issues in tests
 
 [tool.ruff.lint.isort]
-known-first-party = ["mcp_scan"]
-section-order = [
-  "future",
-  "standard-library",
-  "third-party",
-  "first-party",
-  "local-folder",
-]
+known-first-party = ["otelpython"]
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
-
-[tool.uv]
-dev-dependencies = [
-    "mypy>=1.18.2",
-    "ruff>=0.11.11",
-]
