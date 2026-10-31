@@ -1,48 +1,19 @@
 // SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 // SPDX-License-Identifier: Apache-2.0
 
-// use std::time::Duration;
-
-use opentelemetry_otlp::{LogExporter, Protocol, WithExportConfig};
+use opentelemetry_otlp::LogExporter;
 use opentelemetry_sdk::logs::SdkLoggerProvider;
 use opentelemetry_sdk::Resource;
 
-pub fn init_logger(resource: Resource, endpoint: String, protocol: String) -> SdkLoggerProvider {
-    let stdout_exporter = opentelemetry_stdout::LogExporter::default();
+use super::debug_enabled;
 
-    let otlp_exporter: opentelemetry_otlp::LogExporter = match protocol.as_str() {
-        "grpc" => LogExporter::builder()
-            .with_tonic()
-            // .with_export_config(ExportConfig {
-            //     endpoint: endpoint.into(),
-            //     timeout: Duration::from_secs(3).into(),
-            //     protocol: Protocol::Grpc,
-            // })
-            .with_protocol(Protocol::Grpc)
-            .with_endpoint(endpoint)
-            .build()
-            .expect("Failed to initialize OTLP logger exporter"),
-        "http" => LogExporter::builder()
-            .with_http()
-            // .with_export_config(ExportConfig {
-            //     endpoint: endpoint.clone() + "/v1/logs",
-            //     timeout: Duration::from_secs(3).into(),
-            //     protocol: Protocol::HttpBinary,
-            // })
-            .with_protocol(Protocol::HttpBinary)
-            .with_endpoint(endpoint.clone() + "/v1/logs")
-            .build()
-            .expect("Failed to initialize OTLP logger exporter"),
-        &_ => panic!("unsupported OTLP protocol: {}", protocol),
-    };
-
-    let provider: SdkLoggerProvider = SdkLoggerProvider::builder()
-        .with_batch_exporter(otlp_exporter)
-        .with_simple_exporter(stdout_exporter)
-        .with_resource(resource)
-        .build();
-
-    // Note: Log bridge setup moved to main.rs to avoid conflicts with tracing subscriber
-
-    provider
+/// The OTLP transport and endpoint come from the OTEL_EXPORTER_OTLP_* variables.
+pub fn init_logger(resource: Resource) -> anyhow::Result<SdkLoggerProvider> {
+    let mut builder = SdkLoggerProvider::builder()
+        .with_batch_exporter(LogExporter::builder().build()?)
+        .with_resource(resource);
+    if debug_enabled() {
+        builder = builder.with_simple_exporter(opentelemetry_stdout::LogExporter::default());
+    }
+    Ok(builder.build())
 }
