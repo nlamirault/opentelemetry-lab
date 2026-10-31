@@ -1,43 +1,19 @@
 // SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 // SPDX-License-Identifier: Apache-2.0
 
-// use std::time::Duration;
-
-use opentelemetry_otlp::{Protocol, SpanExporter, WithExportConfig};
+use opentelemetry_otlp::SpanExporter;
 use opentelemetry_sdk::trace::SdkTracerProvider;
 use opentelemetry_sdk::Resource;
 
-pub fn init_tracer(resource: Resource, endpoint: String, protocol: String) -> SdkTracerProvider {
-    let exporter: opentelemetry_otlp::SpanExporter = match protocol.as_str() {
-        "grpc" => SpanExporter::builder()
-            .with_tonic()
-            // .with_export_config(ExportConfig {
-            //     endpoint: endpoint.into(),
-            //     timeout: Duration::from_secs(3).into(),
-            //     protocol: Protocol::Grpc,
-            // })
-            .with_protocol(Protocol::Grpc)
-            .with_endpoint(endpoint)
-            .build()
-            .expect("Failed to initialize OTLP tracer exporter"),
-        "http" => SpanExporter::builder()
-            .with_http()
-            // .with_export_config(ExportConfig {
-            //     endpoint: endpoint.clone() + "/v1/traces",
-            //     timeout: Duration::from_secs(3).into(),
-            //     protocol: Protocol::HttpBinary,
-            // })
-            .with_protocol(Protocol::HttpBinary)
-            .with_endpoint(endpoint.clone() + "/v1/traces")
-            .build()
-            .expect("Failed to initialize OTLP tracer exporter"),
-        &_ => panic!("unsupported OTLP protocol: {}", protocol),
-    };
+use super::debug_enabled;
 
-    let provider: SdkTracerProvider = SdkTracerProvider::builder()
-        .with_batch_exporter(exporter)
-        .with_resource(resource)
-        .build();
-
-    provider
+/// The OTLP transport and endpoint come from the OTEL_EXPORTER_OTLP_* variables.
+pub fn init_tracer(resource: Resource) -> anyhow::Result<SdkTracerProvider> {
+    let mut builder = SdkTracerProvider::builder()
+        .with_batch_exporter(SpanExporter::builder().build()?)
+        .with_resource(resource);
+    if debug_enabled() {
+        builder = builder.with_simple_exporter(opentelemetry_stdout::SpanExporter::default());
+    }
+    Ok(builder.build())
 }

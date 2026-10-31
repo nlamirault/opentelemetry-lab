@@ -5,7 +5,9 @@ use axum::Json;
 use serde_json::{json, Value};
 use tracing::info;
 
+use crate::constants::VERSION;
+
 pub async fn handler_version() -> Json<Value> {
     info!(target: "otel_rust::handlers", "Version handler");
-    Json(json!({ "version": "v1.0.0" }))
+    Json(json!({ "version": VERSION }))
 }

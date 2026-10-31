@@ -1,45 +1,19 @@
 // SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 // SPDX-License-Identifier: Apache-2.0
 
-// use std::time::Duration;
-
-use opentelemetry_otlp::{MetricExporter, Protocol, WithExportConfig};
-use opentelemetry_sdk::metrics::{PeriodicReader, SdkMeterProvider};
+use opentelemetry_otlp::MetricExporter;
+use opentelemetry_sdk::metrics::SdkMeterProvider;
 use opentelemetry_sdk::Resource;
 
-pub fn init_meter(resource: Resource, endpoint: String, protocol: String) -> SdkMeterProvider {
-    let exporter: opentelemetry_otlp::MetricExporter = match protocol.as_str() {
-        "grpc" => MetricExporter::builder()
-            .with_tonic()
-            // .with_export_config(ExportConfig {
-            //     endpoint: endpoint.into(),
-            //     timeout: Duration::from_secs(3).into(),
-            //     protocol: Protocol::Grpc,
-            // })
-            .with_protocol(Protocol::Grpc)
-            .with_endpoint(endpoint)
-            .build()
-            .expect("Failed to initialize OTLP meter exporter"),
-        "http" => MetricExporter::builder()
-            .with_http()
-            // .with_export_config(ExportConfig {
-            //     endpoint: endpoint.clone() + "/v1/metrics",
-            //     timeout: Duration::from_secs(3).into(),
-            //     protocol: Protocol::HttpBinary,
-            // })
-            .with_protocol(Protocol::HttpBinary)
-            .with_endpoint(endpoint.clone() + "/v1/metrics")
-            .build()
-            .expect("Failed to initialize OTLP meter exporter"),
-        &_ => panic!("unsupported OTLP protocol: {}", protocol),
-    };
+use super::debug_enabled;
 
-    let reader = PeriodicReader::builder(exporter).build();
-
-    let provider: SdkMeterProvider = SdkMeterProvider::builder()
-        .with_reader(reader)
-        .with_resource(resource)
-        .build();
-
-    provider
+/// The OTLP transport and endpoint come from the OTEL_EXPORTER_OTLP_* variables.
+pub fn init_meter(resource: Resource) -> anyhow::Result<SdkMeterProvider> {
+    let mut builder = SdkMeterProvider::builder()
+        .with_periodic_exporter(MetricExporter::builder().build()?)
+        .with_resource(resource);
+    if debug_enabled() {
+        builder = builder.with_periodic_exporter(opentelemetry_stdout::MetricExporter::default());
+    }
+    Ok(builder.build())
 }
