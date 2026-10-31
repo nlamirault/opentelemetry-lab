@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
 // SPDX-License-Identifier: Apache-2.0
 
-package errors
+package httperr
 
 import (
 	"net/http"
@@ -22,6 +22,10 @@ func HandleInternalServerError(err error, span oteltrace.Span, ctx *gin.Context)
 
 func HandleUnauthorized(err error, span oteltrace.Span, ctx *gin.Context) {
 	HandleHTTPError(err, span, ctx, http.StatusUnauthorized)
+}
+
+func HandleBadGateway(err error, span oteltrace.Span, ctx *gin.Context) {
+	HandleHTTPError(err, span, ctx, http.StatusBadGateway)
 }
 
 func HandleHTTPError(err error, span oteltrace.Span, ctx *gin.Context, status int) {

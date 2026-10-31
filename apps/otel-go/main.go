@@ -21,46 +21,9 @@ import (
 func main() {
 	ctx := context.Background()
 
-	// logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
-	// 	AddSource: true,
-	// 	Level:     slog.LevelDebug,
-	// }))
-	// slog.SetDefault(logger)
-
-	// log.SetOutput(os.Stderr)
-	// if os.Getenv("DEBUG") == "true" {
-	// 	slog.SetLogLoggerLevel(slog.LevelDebug)
-	// }
-
-	// logger := slog.New(
-	// 	slogformatter.NewFormatterHandler(
-	// 		slogformatter.TimezoneConverter(time.UTC),
-	// 		slogformatter.TimeFormatter(time.RFC3339, nil),
-	// 		slogformatter.HTTPRequestFormatter(false),
-	//     	slogformatter.HTTPResponseFormatter(false),
-	// 	)(
-	// 		// slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{}),
-	// 		slog.NewJSONHandler(os.Stdout, nil),
-	// 	),
-	// )
-
-	// // Add an attribute to all log entries made through this logger.
-	// logger = logger.With("gin_mode", gin.EnvGinMode)
-
 	serviceName := "otel-go"
 	if os.Getenv("OTEL_SERVICE_NAME") != "" {
-		// slog.Info("Use OTEL_SERVICE_NAME variable")
 		serviceName = os.Getenv("OTEL_SERVICE_NAME")
-	}
-
-	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-	if endpoint == "" {
-		log.Fatal("OpenTelemetry endpoint not specified")
-	}
-
-	protocol := os.Getenv("OTEL_EXPORTER_OTLP_PROTOCOL")
-	if protocol == "" {
-		log.Fatal("OpenTelemetry protocol not specified")
 	}
 
 	resource, err := telemetry.CreateResource(ctx, serviceName)
@@ -68,7 +31,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	lp, err := telemetry.InitLogger(ctx, resource, serviceName, endpoint, protocol)
+	lp, err := telemetry.InitLogger(ctx, resource, serviceName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -78,7 +41,7 @@ func main() {
 		}
 	}()
 
-	tp, err := telemetry.InitTracer(ctx, resource, endpoint, protocol)
+	tp, err := telemetry.InitTracer(ctx, resource)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -88,7 +51,7 @@ func main() {
 		}
 	}()
 
-	mp, err := telemetry.InitMeter(ctx, resource, endpoint, protocol)
+	mp, err := telemetry.InitMeter(ctx, resource)
 	if err != nil {
 		log.Fatal(err)
 	}

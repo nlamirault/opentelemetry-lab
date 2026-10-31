@@ -9,6 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+
+	"github.com/nlamirault/otel-go/version"
 )
 
 type AppHandler struct{}
@@ -31,5 +33,5 @@ func (h *AppHandler) Version(ctx *gin.Context) {
 	zap.L().Info("Handling version request",
 		zap.String("trace_id", span.SpanContext().TraceID().String()),
 		zap.String("span_id", span.SpanContext().SpanID().String()))
-	ctx.JSON(http.StatusOK, gin.H{"version": "v1.0.0"})
+	ctx.JSON(http.StatusOK, gin.H{"version": version.Version})
 }

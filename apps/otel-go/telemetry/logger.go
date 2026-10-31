@@ -5,12 +5,10 @@ package telemetry
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"go.opentelemetry.io/contrib/bridges/otelzap"
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
+	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/log/global"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
@@ -19,80 +17,54 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func InitLogger(ctx context.Context, resource *resource.Resource, serviceName string, otlpEndpoint string, protocol string) (*sdklog.LoggerProvider, error) {
-	var otlpExporter sdklog.Exporter
-	var err error
-	switch protocol {
-	case "http":
-		otlpExporter, err = otlploghttp.New(
-			ctx,
-			otlploghttp.WithEndpointURL(fmt.Sprintf("%s/v1/logs", otlpEndpoint)))
-		if err != nil {
-			return nil, err
-		}
-	case "grpc":
-		otlpExporter, err = otlploggrpc.New(ctx,
-			otlploggrpc.WithEndpointURL(otlpEndpoint))
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, fmt.Errorf("unsupported protocol: %s", protocol)
+// InitLogger configures the exporter from the OTEL_LOGS_EXPORTER and
+// OTEL_EXPORTER_OTLP_* environment variables, and replaces the global zap
+// logger with one writing JSON to stdout and records to OpenTelemetry.
+func InitLogger(ctx context.Context, resource *resource.Resource, serviceName string) (*sdklog.LoggerProvider, error) {
+	exporter, err := autoexport.NewLogExporter(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	var provider *sdklog.LoggerProvider
-	if os.Getenv(ENV_OTEL_DEBUG) != "" {
+	opts := []sdklog.LoggerProviderOption{
+		sdklog.WithProcessor(sdklog.NewBatchProcessor(exporter)),
+		sdklog.WithResource(resource),
+	}
+	if os.Getenv(envOTelDebug) != "" {
 		stdoutExporter, err := stdoutlog.New()
 		if err != nil {
 			return nil, err
 		}
-
-		provider = sdklog.NewLoggerProvider(
-			sdklog.WithProcessor(sdklog.NewBatchProcessor(otlpExporter)),
-			sdklog.WithProcessor(sdklog.NewSimpleProcessor(stdoutExporter)),
-			sdklog.WithResource(resource),
-		)
-	} else {
-		provider = sdklog.NewLoggerProvider(
-			sdklog.WithProcessor(sdklog.NewBatchProcessor(otlpExporter)),
-			sdklog.WithResource(resource),
-		)
+		opts = append(opts, sdklog.WithProcessor(sdklog.NewSimpleProcessor(stdoutExporter)))
 	}
+	provider := sdklog.NewLoggerProvider(opts...)
 
 	global.SetLoggerProvider(provider)
 
-	atom := zap.NewAtomicLevel()
-	atom.SetLevel(zap.InfoLevel)
-	config := zap.Config{
-		Level:             atom,
-		Encoding:          "json",
-		OutputPaths:       []string{"stdout"},
-		ErrorOutputPaths:  []string{"stderr"},
-		InitialFields:     map[string]interface{}{"service": serviceName},
-		EncoderConfig:     zap.NewProductionEncoderConfig(),
-		DisableStacktrace: true,
-	}
-	log, err := config.Build()
+	level := zap.NewAtomicLevelAt(zap.InfoLevel)
+	// The service field is only added to stdout: OpenTelemetry log records
+	// already carry it as the service.name resource attribute.
+	stdoutCore := zapcore.NewCore(
+		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
+		zapcore.Lock(os.Stdout),
+		level,
+	).With([]zapcore.Field{zap.String("service", serviceName)})
+	otelCore, err := zapcore.NewIncreaseLevelCore(
+		otelzap.NewCore(serviceName, otelzap.WithLoggerProvider(provider)),
+		level,
+	)
 	if err != nil {
 		return nil, err
 	}
-	otelCore := zap.WrapCore(func(c zapcore.Core) zapcore.Core {
-		return zapcore.NewTee(
-			zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), zapcore.AddSync(os.Stdout), zapcore.InfoLevel),
-			otelzap.NewCore(serviceName, otelzap.WithLoggerProvider(global.GetLoggerProvider())),
-		)
-	})
-	logger := log.WithOptions(otelCore)
-
-	// core := zapcore.NewTee(
-	// 	zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), zapcore.AddSync(os.Stdout), zapcore.InfoLevel),
-	// 	otelzap.NewCore(serviceName, otelzap.WithLoggerProvider(global.GetLoggerProvider())),
-	// )
-	// logger := zap.New(core)
+	logger := zap.New(
+		zapcore.NewTee(stdoutCore, otelCore),
+		zap.AddCaller(),
+		zap.ErrorOutput(zapcore.Lock(os.Stderr)),
+	)
 
 	// Replace global zap logger
 	zap.ReplaceGlobals(logger)
 
-	zap.L().Info("OpenTelemetry logger provider done", zap.String("service", serviceName))
+	zap.L().Info("OpenTelemetry logger provider done")
 	return provider, nil
 }

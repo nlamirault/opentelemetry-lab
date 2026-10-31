@@ -8,18 +8,20 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+
+	"github.com/nlamirault/otel-go/version"
 )
 
 const (
-	METRIC_BUILD_INFO = "opentelemetry.lab.build.info"
+	metricBuildInfo = "opentelemetry.lab.build.info"
 )
 
 // InitBuildInfo creates and records the opentelemetry.lab.build.info metric
 // with standard semantic conventions for language, service, and version.
 func InitBuildInfo(ctx context.Context, meterProvider *sdkmetric.MeterProvider, serviceName string) error {
 	meter := meterProvider.Meter(serviceName)
-	buildInfo, err := meter.Int64Counter(METRIC_BUILD_INFO)
+	buildInfo, err := meter.Int64Counter(metricBuildInfo)
 	if err != nil {
 		return err
 	}
@@ -27,7 +29,7 @@ func InitBuildInfo(ctx context.Context, meterProvider *sdkmetric.MeterProvider, 
 	buildInfo.Add(ctx, 1, metric.WithAttributes(
 		semconv.TelemetrySDKLanguageGo,
 		semconv.ServiceName(serviceName),
-		semconv.ServiceVersion("v1.0.0"),
+		semconv.ServiceVersion(version.Version),
 	))
 
 	return nil

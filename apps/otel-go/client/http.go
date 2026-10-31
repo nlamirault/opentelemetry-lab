@@ -4,6 +4,7 @@
 package client
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -24,9 +25,11 @@ func NewHTTPClient() *HTTPClient {
 	}
 }
 
+// Call sends a GET request to url, and returns an error if the request fails
+// or if the response status is 4xx or 5xx.
 func (h *HTTPClient) Call(ctx *gin.Context, url string) error {
 	zap.L().Info("HTTP call to", zap.String("url", url))
-	
+
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return err
@@ -43,12 +46,15 @@ func (h *HTTPClient) Call(ctx *gin.Context, url string) error {
 	}()
 
 	zap.L().Info("Response", zap.String("status", resp.Status))
-	
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-	
+
 	zap.L().Debug("Body", zap.String("body", string(body)))
+	if resp.StatusCode >= http.StatusBadRequest {
+		return fmt.Errorf("%s returned %s", url, resp.Status)
+	}
 	return nil
 }
