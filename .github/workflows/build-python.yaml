@@ -37,16 +37,35 @@ jobs:
           python-version: ${{ matrix.python-version }}
           working-directory: apps/otel-python
 
-      - name: ✅ Build application
+      - name: 📦️ Install dependencies
         run: |
           cd apps/otel-python
-          uv build
+          uv sync --locked
+
+      - name: ✅ Format
+        run: |
+          cd apps/otel-python
+          uv run ruff format --check
 
       - name: ✅ Lint
         run: |
           cd apps/otel-python
           uv run ruff check
 
+      - name: ✅ Type check
+        run: |
+          cd apps/otel-python
+          uv run mypy
+
+      - name: ✅ Test
+        run: |
+          cd apps/otel-python
+          uv run pytest
+
+      - name: ✅ Build application
+        run: |
+          cd apps/otel-python
+          uv build
 
   docker:
     runs-on: ubuntu-latest

@@ -25,3 +25,13 @@ The exporters follow the standard environment variables:
 
 Logs are written as JSON lines to stdout, with the trace context, and exported with OTLP.
 Metrics are exported with OTLP, and served for Prometheus on `/metrics`.
+
+## Development
+
+```shell
+uv sync
+uv run ruff format --check
+uv run ruff check
+uv run mypy
+uv run pytest
+```
