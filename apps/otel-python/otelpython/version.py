@@ -4,6 +4,6 @@
 from importlib import metadata
 
 try:
-    version_info = metadata.version("otelpython")
+    version_info = f"v{metadata.version('otel-python')}"
 except metadata.PackageNotFoundError:
     version_info = "unknown"
