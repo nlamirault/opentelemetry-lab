@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+# Fixture: `make schema-policy-test` expects the `metric_name_suffix` finding.
+file_format: definition_manifest/2.0
+schema_url: https://nlamirault.github.io/opentelemetry-lab/schemas/fixture-metric_name_suffix/1.0.0
+stability: development
+dependencies:
+# Keep in sync with model/manifest.yaml: `make schema-deps` fetches that version only.
+- schema_url: https://opentelemetry.io/schemas/1.43.0
+  registry_path: .deps/semconv-v1.43.0[model]

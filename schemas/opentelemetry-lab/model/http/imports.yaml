@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+# Upstream HTTP signals the lab apps use unchanged. Every app serves HTTP, and
+# the `/chain` route calls other apps, so both the server and the client side
+# are part of the contract.
+#
+# The upstream registry is still in the v1 format: Weaver matches a span
+# import against the v1 group id (`span.http.server`), not against the span
+# type (`http.server`), while a metric import matches the metric name.
+file_format: definition/2
+
+imports:
+  spans:
+  - span.http.server
+  - span.http.client
+  metrics:
+  - http.server.request.duration
+  - http.client.request.duration

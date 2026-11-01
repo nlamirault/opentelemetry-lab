@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+# The Zig app's request counter, defined inside the upstream `http.` namespace.
+file_format: definition/2
+
+metrics:
+- name: http.server.requests
+  brief: HTTP requests received.
+  instrument: counter
+  unit: "{request}"
+  stability: development
+  requirement_level: recommended

@@ -1,0 +1,55 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+---
+name: Schema / Weaver
+
+on:
+  pull_request:
+    paths:
+    - schemas/**
+    - Makefile
+    - .github/workflows/schema.yaml
+  workflow_dispatch: # Allow manual triggering
+
+permissions:
+  contents: read
+
+jobs:
+  registry:
+    runs-on: ubuntu-latest
+    name: Registry
+
+    steps:
+    - name: 🚚 Checkout
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        # schema-diff reads the base branch registry with git archive.
+        fetch-depth: 0
+
+    - name: 📦️ Cache semantic conventions
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: schemas/opentelemetry-lab/.deps/semconv-*
+        key: semconv-${{ hashFiles('schemas/opentelemetry-lab/model/manifest.yaml') }}
+
+    # The default ansi format: gh_workflow_command prints nothing for a
+    # resolution error, such as an unresolved `ref`.
+    - name: ✅ Check registry
+      run: make schema-check
+
+    - name: ✅ Test policies
+      run: make schema-policy-test
+
+    - name: ✅ Check docs
+      run: make schema-docs-check
+
+    - name: 📝 Diff against the base branch
+      env:
+        BASE_REF: ${{ github.base_ref || 'main' }}
+      run: |
+        {
+          echo "## Registry changes against ${BASE_REF}"
+          echo
+          make --no-print-directory schema-diff SCHEMA_BASELINE="origin/${BASE_REF}"
+        } >> "$GITHUB_STEP_SUMMARY"

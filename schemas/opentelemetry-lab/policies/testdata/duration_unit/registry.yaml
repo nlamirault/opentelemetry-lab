@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+# A duration recorded in milliseconds.
+file_format: definition/2
+
+metrics:
+- name: lab.request.duration
+  brief: Duration of a request.
+  instrument: histogram
+  unit: ms
+  stability: development
+  requirement_level: recommended

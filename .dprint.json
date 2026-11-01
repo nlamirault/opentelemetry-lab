@@ -19,7 +19,7 @@
     "indentWidth": 2,
     "indentBlockSequenceInMap": false
   },
-  "excludes": ["**/*-lock.json", "**/templates/*.yaml"],
+  "excludes": ["**/*-lock.json", "**/templates/*.yaml", "schemas/*/docs/**"],
   "exec": {
     "cwd": "${configDir}",
     "commands": [

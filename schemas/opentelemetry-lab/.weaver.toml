@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+# Weaver reads this file from its working directory. The `registry` section
+# applies to every `weaver registry` command.
+
+# The registry is written in Weaver's definition/2 format.
+[registry]
+v2 = true

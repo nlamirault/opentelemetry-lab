@@ -1,0 +1,51 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+# Metrics defined by the lab.
+file_format: definition/2
+
+metrics:
+- name: lab.build.info
+  brief: Build information of the lab application. The value is always 1.
+  note: |
+    Follows the Prometheus `_info` idiom: a gauge whose value is 1 and whose
+    attributes carry the build information. It is unitless, so the
+    Prometheus translation stores it as `lab_build_info` with no unit or
+    `_total` suffix.
+  instrument: gauge
+  unit: ""
+  stability: development
+  requirement_level: recommended
+  attributes:
+  - ref: lab.app.language
+    requirement_level: required
+  - ref: service.name
+    requirement_level: required
+  - ref: service.version
+    requirement_level: required
+  - ref: telemetry.sdk.language
+    requirement_level: recommended
+
+# Emitted by every app today. The instrument changes from counter to gauge,
+# so the v2 syntax forbids `reason: renamed`.
+- name: opentelemetry.lab.build.info
+  brief: Build information of the lab application.
+  instrument: counter
+  unit: ""
+  stability: development
+  requirement_level: recommended
+  deprecated:
+    reason: uncategorized
+    note: |
+      Replaced by the `lab.build.info` gauge. The instrument changed from
+      counter to gauge, so this is not a rename.
+  attributes:
+  - ref: service.name
+    requirement_level: required
+  - ref: service.version
+    requirement_level: required
+  - ref: telemetry.sdk.language
+    requirement_level: required
+  annotations:
+    code_generation:
+      exclude: true

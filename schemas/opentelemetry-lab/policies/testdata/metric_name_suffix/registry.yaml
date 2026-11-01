@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+# A counter named with the suffix the Prometheus translation adds itself.
+file_format: definition/2
+
+metrics:
+- name: lab.requests_total
+  brief: Requests received.
+  instrument: counter
+  unit: "{request}"
+  stability: development
+  requirement_level: recommended
