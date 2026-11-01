@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+file_format: definition_manifest/2.0
+schema_url: https://nlamirault.github.io/opentelemetry-lab/schemas/1.0.0
+description: |
+  Telemetry contract of the OpenTelemetry lab applications.
+
+  Extends the upstream OpenTelemetry semantic conventions with the telemetry
+  the lab code owns: the `lab.build.info` metric and the `lab.*` attributes
+  it carries. Upstream signals the lab relies on are imported or refined, not
+  redeclared.
+stability: development
+dependencies:
+# The Makefile reads the semconv version from the `schema_url` below, so
+# bump the version here and in `registry_path` together. `make schema-deps`
+# fetches the model into `.deps/` (gitignored).
+#
+# Weaver resolves `registry_path` against its working directory, not against
+# this file, so every Weaver command runs from `schemas/opentelemetry-lab/`.
+- schema_url: https://opentelemetry.io/schemas/1.43.0
+  registry_path: .deps/semconv-v1.43.0[model]

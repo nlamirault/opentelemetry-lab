@@ -35,6 +35,10 @@ area/rust:
 - changed-files:
   - any-glob-to-any-file: apps/otel-rust/**
 
+area/schema:
+- changed-files:
+  - any-glob-to-any-file: schemas/**
+
 area/swift:
 - changed-files:
   - any-glob-to-any-file: apps/otel-swift/**

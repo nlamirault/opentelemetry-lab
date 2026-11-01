@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+# The Python app's custom names (apps/otel-python), with no `lab.` prefix.
+file_format: definition/2
+
+attributes:
+- key: target_service
+  type: string
+  brief: Target of the chained call.
+  stability: development
+
+metrics:
+- name: request.count
+  brief: Requests received.
+  instrument: counter
+  unit: "{request}"
+  stability: development
+  requirement_level: recommended

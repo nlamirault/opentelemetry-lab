@@ -41,6 +41,9 @@ apps/otel-zig/zig-out/
 .venv
 **/__pycache__/
 
+# Weaver: upstream semconv fetched by `make schema-deps`
+schemas/*/.deps/
+
 
 # Local Compose profile selection
 .env

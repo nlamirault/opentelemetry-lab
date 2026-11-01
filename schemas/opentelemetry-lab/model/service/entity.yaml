@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+# Resource contract of the lab applications. Every app runs with
+# `OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=...,service.version=...`
+# in compose.yaml, so these attributes are required rather than recommended.
+# No app sets `service.namespace` yet, so it stays recommended.
+file_format: definition/2
+
+entity_refinements:
+- id: entity.service.lab
+  ref: service
+  brief: A lab application.
+  description:
+  - ref: service.version
+    requirement_level: required
+  - ref: service.namespace
+    requirement_level: recommended
+
+- id: entity.deployment.lab
+  ref: deployment
+  brief: The environment a lab application runs in.
+  description:
+  - ref: deployment.environment.name
+    requirement_level: required

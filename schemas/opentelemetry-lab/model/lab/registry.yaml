@@ -1,0 +1,53 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+# Attributes defined by the lab. Every key starts with `lab.`.
+file_format: definition/2
+
+attributes:
+- key: lab.app.language
+  type:
+    members:
+    - id: go
+      value: go
+      brief: Go application (`apps/otel-go`).
+      stability: development
+    - id: java
+      value: java
+      brief: Java application (`apps/otel-java`).
+      stability: development
+    - id: javascript
+      value: javascript
+      brief: JavaScript application on Node.js (`apps/otel-js`).
+      stability: development
+    - id: typescript
+      value: typescript
+      brief: TypeScript application on Node.js (`apps/otel-ts`).
+      stability: development
+    - id: python
+      value: python
+      brief: Python application (`apps/otel-python`).
+      stability: development
+    - id: rust
+      value: rust
+      brief: Rust application (`apps/otel-rust`).
+      stability: development
+    - id: swift
+      value: swift
+      brief: Swift application (`apps/otel-swift`).
+      stability: development
+    - id: zig
+      value: zig
+      brief: Zig application (`apps/otel-zig`).
+      stability: development
+    - id: react
+      value: react
+      brief: React application in the browser (`apps/otel-react`).
+      stability: development
+  brief: Language the lab application is written in.
+  note: |
+    `telemetry.sdk.language` names the SDK runtime, so it cannot tell a
+    JavaScript app from a TypeScript one (both are `nodejs`), and it has no
+    value for Zig. This attribute names the language of the lab app itself.
+  examples: ["go", "typescript"]
+  stability: development

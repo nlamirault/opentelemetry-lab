@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+# `make schema-docs` renders this target into `schemas/opentelemetry-lab/docs/`.
+whitespace_control:
+  trim_blocks: true
+  lstrip_blocks: true
+  # pre-commit's end-of-file-fixer wants exactly one final newline.
+  keep_trailing_newline: true
+
+templates:
+- template: registry.md.j2
+  filter: .
+  application_mode: single
