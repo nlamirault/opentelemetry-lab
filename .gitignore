@@ -43,6 +43,8 @@ apps/otel-zig/zig-out/
 
 # Weaver: upstream semconv fetched by `make schema-deps`
 schemas/*/.deps/
+# Weaver: live-check reports
+schemas/*/.live-check/
 
 
 # Local Compose profile selection

@@ -7,3 +7,31 @@
 # The registry is written in Weaver's definition/2 format.
 [registry]
 v2 = true
+
+# `registry live-check` reads this section. Runtime settings (listener
+# address, ports, report output, OTLP log emission, --fail-on) stay on the
+# command line: the compose service and the smoke test run differently.
+[live-check]
+# Look an attribute up in every definition of the registry and of semconv,
+# not only on the signal it was seen on. Without it, any upstream attribute
+# this registry does not reference is reported as `missing_attribute`.
+search_all_attributes = true
+
+# An enum value outside the registry and a span of the wrong kind break the
+# queries built on them: report them as violations, not information.
+[[live-check.finding_level_overrides]]
+ids = ["undefined_enum_variant", "kind_mismatch"]
+level = "violation"
+
+# Each filter drops findings nobody in the lab can act on. Weaver cannot
+# filter by instrumentation scope: the collector overlay
+# (etc/otel/otel-collector-weaver.yaml) drops the telemetry of the
+# instrumentation libraries before it reaches Weaver.
+
+# The SDK resource detectors add host.*, os.* and process.* to every resource.
+# Their stability is upstream's to change, and the finding repeats on every
+# resource of every app.
+[[live-check.finding_filters]]
+signal_type = "resource"
+sample_names = ["host.*", "os.*", "process.*"]
+exclude = ["not_stable"]

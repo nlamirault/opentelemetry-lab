@@ -47,6 +47,24 @@ docker compose up -d
 
 Swap `lgtm` for `signoz`, `greptimedb`, or `victoriastack` to change backend.
 
+### Check the telemetry against the Weaver registry
+
+The `schema` profile adds a
+[Weaver live-check](schemas/opentelemetry-lab/README.md#live-check) of the
+telemetry the apps emit, with the `lgtm` backend. `WEAVER_LIVE_CHECK=1` makes
+the collector tee the app telemetry to it:
+
+```shell
+make schema-deps    # once: fetch the semantic conventions Weaver checks against
+WEAVER_LIVE_CHECK=1 WEAVER_UID=$(id -u) WEAVER_GID=$(id -g) \
+  docker compose --profile lgtm --profile apps --profile schema up -d
+# or: make schema-live-check-up
+```
+
+Findings show in the **OpenTelemetry / Schema compliance** Grafana dashboard.
+`make schema-live-check-report` stops the run and writes the report to
+`schemas/opentelemetry-lab/.live-check/compose/live_check.json`.
+
 ### Everyday commands
 
 ```shell
@@ -91,6 +109,13 @@ make down                 # stop everything
 | 4318        | 4318           | OpenTelemetry Collector | OTLP HTTP receiver          |
 | 8889        | 8889           | OpenTelemetry Collector | Prometheus metrics exporter |
 | 12345       | 12345          | Alloy                   | Grafana Alloy HTTP server   |
+
+### Schema (profile: schema)
+
+| Public Port | Container Port | Service | Description                                           |
+| ----------- | -------------- | ------- | ----------------------------------------------------- |
+| 4320        | 4320           | Weaver  | Live-check admin: `/health`, `/stop`, `/report`       |
+|             | 4317           | Weaver  | OTLP gRPC listener, fed by the collector (in-network) |
 
 ### Application Services
 
@@ -151,4 +176,3 @@ make down                 # stop everything
 | 8428        | 8428           | VictoriaMetrics | Metrics storage and query API           |
 | 9428        | 9428           | VictoriaLogs    | Logs storage and query API              |
 | 10428       | 10428          | VictoriaTraces  | Traces storage and query API            |
-

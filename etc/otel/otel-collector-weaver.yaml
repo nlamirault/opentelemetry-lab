@@ -1,0 +1,101 @@
+# SPDX-FileCopyrightText: Copyright (C) Nicolas Lamirault <nicolas.lamirault@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# Opt-in overlay: tees the telemetry the apps send to the Weaver live-check
+# listener of the `schema` profile. compose.yaml passes it as a second
+# `--config` when WEAVER_LIVE_CHECK is set.
+#
+# The collector merges the `--config` files in order: maps are joined, and a
+# list replaces the list under the same key. This file only adds components
+# and pipelines, so the backend pipelines stay as they are.
+#
+# The weaver pipelines read the `otlp` receiver only, and run no `resource` or
+# `resourcedetection` processor: Weaver checks what the apps emit, not what
+# this collector rewrites.
+
+receivers:
+  # Weaver sends its findings here rather than to `otlp`. They reach Loki
+  # through `logs/weaver-findings`, not through the backend `logs` pipeline,
+  # whose `resourcedetection` replaces `service.name` with `otel-collector`.
+  # Not published on the host.
+  otlp/weaver-findings:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4319
+
+exporters:
+  otlp_grpc/weaver:
+    endpoint: weaver:4317
+    tls:
+      insecure: true
+    # The Weaver OTLP listener rejects gzip, the exporter default.
+    compression: none
+    # Weaver is a development check: drop what it cannot take rather than
+    # retry and hold the queue.
+    retry_on_failure:
+      enabled: false
+
+processors:
+  # Findings sent to `otlp` by mistake must never go back to Weaver, or it
+  # checks its own findings in a loop.
+  filter/weaver-findings:
+    error_mode: ignore
+    logs:
+      log_record:
+      - instrumentation_scope.name == "weaver.live_check"
+
+  # Telemetry from instrumentation libraries the lab does not own. Weaver
+  # cannot filter findings by instrumentation scope, so it is dropped here,
+  # before Weaver: otherwise its findings bury the ones the lab code causes.
+  # Attributes the lab code adds to a span these libraries create are not
+  # checked either.
+  filter/instrumentation-libraries:
+    error_mode: ignore
+    traces:
+      span: &instrumentation-libraries # otel-java: the Java agent, which still emits the old HTTP conventions.
+      - IsMatch(instrumentation_scope.name, "^io[.]opentelemetry[.]")
+      # otel-js, otel-ts: the Node auto-instrumentations (http, runtime-node).
+      - IsMatch(instrumentation_scope.name, "^@opentelemetry/instrumentation-")
+      # otel-ts: the Fastify instrumentation.
+      - instrumentation_scope.name == "@fastify/otel"
+      # otel-go: otelgin and the host and runtime instrumentations.
+      - IsMatch(instrumentation_scope.name, "^go[.]opentelemetry[.]io/contrib/instrumentation/")
+      # otel-python: the fastapi, httpx and system_metrics instrumentations.
+      - IsMatch(instrumentation_scope.name, "^opentelemetry[.]instrumentation[.]")
+    metrics:
+      metric: *instrumentation-libraries
+    logs:
+      log_record: *instrumentation-libraries
+
+service:
+  pipelines:
+    traces/weaver:
+      receivers:
+      - otlp
+      processors:
+      - filter/instrumentation-libraries
+      exporters:
+      - otlp_grpc/weaver
+    metrics/weaver:
+      receivers:
+      - otlp
+      processors:
+      - filter/instrumentation-libraries
+      exporters:
+      - otlp_grpc/weaver
+    logs/weaver:
+      receivers:
+      - otlp
+      processors:
+      - filter/weaver-findings
+      - filter/instrumentation-libraries
+      exporters:
+      - otlp_grpc/weaver
+    logs/weaver-findings:
+      receivers:
+      - otlp/weaver-findings
+      processors:
+      - batch
+      exporters:
+      - otlp_http/logs

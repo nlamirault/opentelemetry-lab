@@ -53,11 +53,11 @@ x-clickhouse-defaults: &clickhouse-defaults
       condition: service_healthy
   healthcheck:
     test:
-      - CMD
-      - wget
-      - --spider
-      - -q
-      - 0.0.0.0:8123/ping
+    - CMD
+    - wget
+    - --spider
+    - -q
+    - 0.0.0.0:8123/ping
     interval: 30s
     timeout: 5s
     retries: 3
@@ -67,7 +67,7 @@ x-clickhouse-defaults: &clickhouse-defaults
       soft: 262144
       hard: 262144
   environment:
-    - CLICKHOUSE_SKIP_USER_SETUP=1
+  - CLICKHOUSE_SKIP_USER_SETUP=1
 
 x-zookeeper-defaults: &zookeeper-defaults
   <<: *common
@@ -249,11 +249,16 @@ services:
     image: otel/opentelemetry-collector-contrib:0.147.0
     container_name: otel
     networks: *collector-net
-    command:
-    - "--config=/conf/config.yaml"
-    - "--feature-gates=service.profilesSupport"
+    # WEAVER_LIVE_CHECK adds the overlay that tees the app telemetry to the
+    # `weaver` service of the `schema` profile. A string, not a list: an unset
+    # variable then leaves no empty argument behind.
+    command: >-
+      --config=/conf/config.yaml
+      ${WEAVER_LIVE_CHECK:+--config=/conf/weaver.yaml}
+      --feature-gates=service.profilesSupport
     volumes:
     - ./etc/otel/otel-collector-lgtm.yaml:/conf/config.yaml
+    - ./etc/otel/otel-collector-weaver.yaml:/conf/weaver.yaml
     ports:
     - "4317:4317" # OTLP gRPC receiver
     - "4318:4318" # OTLP http receiver
@@ -344,6 +349,51 @@ services:
     - "3000:3000"
 
   # ==========================================================================
+  # Schema (profile: schema) — Weaver live-check of the app telemetry
+  # ==========================================================================
+  # Runs with the lgtm collector overlay, which feeds it:
+  #   make schema-deps
+  #   WEAVER_LIVE_CHECK=1 docker compose --profile lgtm --profile apps --profile schema up -d
+  weaver:
+    <<: *common
+    profiles: [schema]
+    image: otel/weaver:v0.28.0@sha256:5857bb81d8cc7ed608cdcae37c4b459eb020f21dd4acade35f7933cd6762fbcc
+    container_name: weaver
+    # The image runs as the non-root user `weaver`: map the caller so the
+    # report can be written to the bind mount.
+    user: "${WEAVER_UID:-1000}:${WEAVER_GID:-1000}"
+    # Weaver reads .weaver.toml from its working directory, and resolves the
+    # semconv dependency (`make schema-deps`) against it.
+    working_dir: /src/schemas/opentelemetry-lab
+    command:
+    - registry
+    - live-check
+    - --registry=/src/schemas/opentelemetry-lab/model
+    - --include-unreferenced
+    - --otlp-grpc-address=0.0.0.0
+    - --otlp-grpc-port=4317
+    - --admin-port=4320
+    - --inactivity-timeout=0
+    - --format=json
+    - --output=/src/schemas/opentelemetry-lab/.live-check/compose
+    - --emit-otlp-logs=true
+    # The findings receiver of the collector overlay, not its `otlp` one.
+    - --otlp-logs-endpoint=http://otel-collector:4319
+    volumes:
+    - ./schemas/opentelemetry-lab:/src/schemas/opentelemetry-lab
+    # OTLP 4317 is not published: the collector owns it on the host.
+    ports:
+    - "4320:4320" # live-check admin: /health, /stop, /report, /shutdown
+    environment:
+    - HOME=/tmp
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=weaver,service.criticality=low,service.version=0.28.0
+    # Weaver writes the report when the run stops. It stops on SIGINT, not on
+    # the default SIGTERM, and must not restart over its report.
+    stop_signal: SIGINT
+    stop_grace_period: 1m
+    restart: "no"
+
+  # ==========================================================================
   # SigNoz backend (profile: signoz) — ClickHouse, Zookeeper, SigNoz
   # ==========================================================================
   otel-collector-signoz:
@@ -380,14 +430,14 @@ services:
     - bash
     - -c
     - |
-      version="v0.0.1"
-      node_os=$$(uname -s | tr '[:upper:]' '[:lower:]')
-      node_arch=$$(uname -m | sed s/aarch64/arm64/ | sed s/x86_64/amd64/)
-      echo "Fetching histogram-binary for $${node_os}/$${node_arch}"
-      cd /tmp
-      wget -O histogram-quantile.tar.gz "https://github.com/SigNoz/signoz/releases/download/histogram-quantile%2F$${version}/histogram-quantile_$${node_os}_$${node_arch}.tar.gz"
-      tar -xvzf histogram-quantile.tar.gz
-      mv histogram-quantile /var/lib/clickhouse/user_scripts/histogramQuantile
+        version="v0.0.1"
+        node_os=$$(uname -s | tr '[:upper:]' '[:lower:]')
+        node_arch=$$(uname -m | sed s/aarch64/arm64/ | sed s/x86_64/amd64/)
+        echo "Fetching histogram-binary for $${node_os}/$${node_arch}"
+        cd /tmp
+        wget -O histogram-quantile.tar.gz "https://github.com/SigNoz/signoz/releases/download/histogram-quantile%2F$${version}/histogram-quantile_$${node_os}_$${node_arch}.tar.gz"
+        tar -xvzf histogram-quantile.tar.gz
+        mv histogram-quantile /var/lib/clickhouse/user_scripts/histogramQuantile
     restart: on-failure
     volumes:
     - ./etc/clickhouse/user_scripts:/var/lib/clickhouse/user_scripts/
@@ -398,9 +448,9 @@ services:
     image: signoz/signoz-schema-migrator:${OTELCOL_TAG:-v0.129.5}
     container_name: schema-migrator-sync
     command:
-      - sync
-      - --dsn=tcp://clickhouse:9000
-      - --up=
+    - sync
+    - --dsn=tcp://clickhouse:9000
+    - --up=
     depends_on:
       clickhouse:
         condition: service_healthy
@@ -414,9 +464,9 @@ services:
     image: signoz/signoz-schema-migrator:${OTELCOL_TAG:-v0.129.5}
     container_name: schema-migrator-async
     command:
-      - async
-      - --dsn=tcp://clickhouse:9000
-      - --up=
+    - async
+    - --dsn=tcp://clickhouse:9000
+    - --up=
     restart: on-failure
     environment:
     - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=schema-migrator-async,service.criticality=low,service.version=${OTELCOL_TAG:-v0.129.5}
@@ -440,9 +490,9 @@ services:
     profiles: [signoz]
     container_name: signoz-clickhouse
     ports:
-      - "5000:9000"
-      - "5123:8123"
-      - "5181:9181"
+    - "5000:9000"
+    - "5123:8123"
+    - "5181:9181"
     volumes:
     - ./etc/clickhouse/config.xml:/etc/clickhouse-server/config.xml
     - ./etc/clickhouse/users.xml:/etc/clickhouse-server/users.xml
@@ -466,7 +516,7 @@ services:
     image: signoz/signoz:v0.95.0
     container_name: signoz
     command:
-      - --config=/root/config/prometheus.yml
+    - --config=/root/config/prometheus.yml
     ports:
     - "5080:8080" # signoz port
     volumes:
@@ -486,11 +536,11 @@ services:
     - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=signoz,service.criticality=low,service.version=v0.95.0
     healthcheck:
       test:
-        - CMD
-        - wget
-        - --spider
-        - -q
-        - localhost:8080/api/v1/health
+      - CMD
+      - wget
+      - --spider
+      - -q
+      - localhost:8080/api/v1/health
       interval: 30s
       timeout: 5s
       retries: 3
@@ -529,26 +579,26 @@ services:
     profiles: [greptimedb]
     container_name: etcd0
     ports:
-      - 4379:2379
-      - 4380:2380
+    - 4379:2379
+    - 4380:2380
     command:
-      - --name=etcd0
-      - --data-dir=/var/lib/etcd
-      - --initial-advertise-peer-urls=http://etcd0:2380
-      - --listen-peer-urls=http://0.0.0.0:2380
-      - --listen-client-urls=http://0.0.0.0:2379
-      - --advertise-client-urls=http://etcd0:2379
-      - --heartbeat-interval=250
-      - --election-timeout=1250
-      - --initial-cluster=etcd0=http://etcd0:2380
-      - --initial-cluster-state=new
-      - *etcd_initial_cluster_token
+    - --name=etcd0
+    - --data-dir=/var/lib/etcd
+    - --initial-advertise-peer-urls=http://etcd0:2380
+    - --listen-peer-urls=http://0.0.0.0:2380
+    - --listen-client-urls=http://0.0.0.0:2379
+    - --advertise-client-urls=http://etcd0:2379
+    - --heartbeat-interval=250
+    - --election-timeout=1250
+    - --initial-cluster=etcd0=http://etcd0:2380
+    - --initial-cluster-state=new
+    - *etcd_initial_cluster_token
     volumes:
-      - etcd:/var/lib/etcd
+    - etcd:/var/lib/etcd
     environment:
-      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=etcd0,service.criticality=low,service.version=v3.5.10
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=etcd0,service.criticality=low,service.version=v3.5.10
     healthcheck:
-      test: [ "CMD", "etcdctl", "--endpoints=http://etcd0:2379", "endpoint", "health" ]
+      test: ["CMD", "etcdctl", "--endpoints=http://etcd0:2379", "endpoint", "health"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -559,22 +609,22 @@ services:
     image: *greptimedb_image
     container_name: metasrv
     ports:
-      - 4022:3002
-      - 4020:3000
+    - 4022:3002
+    - 4020:3000
     command:
-      - metasrv
-      - start
-      - --store-addrs=etcd0:2379
-      - --rpc-bind-addr=0.0.0.0:3002
-      - --rpc-server-addr=metasrv:3002
-      - --http-addr=0.0.0.0:3000
+    - metasrv
+    - start
+    - --store-addrs=etcd0:2379
+    - --rpc-bind-addr=0.0.0.0:3002
+    - --rpc-server-addr=metasrv:3002
+    - --http-addr=0.0.0.0:3000
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://metasrv:3000/health" ]
+      test: ["CMD", "curl", "-f", "http://metasrv:3000/health"]
       interval: 5s
       timeout: 3s
       retries: 5
     environment:
-      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=metasrv,service.criticality=low,service.version=${GREPTIMEDB_VERSION:-latest}
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=metasrv,service.criticality=low,service.version=${GREPTIMEDB_VERSION:-latest}
     depends_on:
       etcd0:
         condition: service_healthy
@@ -585,23 +635,23 @@ services:
     image: *greptimedb_image
     container_name: datanode0
     ports:
-      - 4010:3001
-      - 4011:5000
+    - 4010:3001
+    - 4011:5000
     command:
-      - datanode
-      - start
-      - --node-id=0
-      - --data-home=/greptimedb_data
-      - --rpc-bind-addr=0.0.0.0:3001
-      - --rpc-server-addr=datanode0:3001
-      - --metasrv-addrs=metasrv:3002
-      - --http-addr=0.0.0.0:5000
+    - datanode
+    - start
+    - --node-id=0
+    - --data-home=/greptimedb_data
+    - --rpc-bind-addr=0.0.0.0:3001
+    - --rpc-server-addr=datanode0:3001
+    - --metasrv-addrs=metasrv:3002
+    - --http-addr=0.0.0.0:5000
     volumes:
-      - datanode:/greptimedb_data
+    - datanode:/greptimedb_data
     environment:
-      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=datanode0,service.criticality=low,service.version=${GREPTIMEDB_VERSION:-latest}
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=datanode0,service.criticality=low,service.version=${GREPTIMEDB_VERSION:-latest}
     healthcheck:
-      test: [ "CMD", "curl", "-fv", "http://datanode0:5000/health" ]
+      test: ["CMD", "curl", "-fv", "http://datanode0:5000/health"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -615,25 +665,25 @@ services:
     image: *greptimedb_image
     container_name: frontend0
     ports:
-      - 4000:4000
-      - 4001:4001
-      - 4002:4002
-      - 4003:4003
+    - 4000:4000
+    - 4001:4001
+    - 4002:4002
+    - 4003:4003
     command:
-      - frontend
-      - start
-      - --metasrv-addrs=metasrv:3002
-      - --http-addr=0.0.0.0:4000
-      - --rpc-bind-addr=0.0.0.0:4001
-      - --mysql-addr=0.0.0.0:4002
-      - --postgres-addr=0.0.0.0:4003
+    - frontend
+    - start
+    - --metasrv-addrs=metasrv:3002
+    - --http-addr=0.0.0.0:4000
+    - --rpc-bind-addr=0.0.0.0:4001
+    - --mysql-addr=0.0.0.0:4002
+    - --postgres-addr=0.0.0.0:4003
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://frontend0:4000/health" ]
+      test: ["CMD", "curl", "-f", "http://frontend0:4000/health"]
       interval: 5s
       timeout: 3s
       retries: 5
     environment:
-      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=frontend0,service.criticality=low,service.version=${GREPTIMEDB_VERSION:-latest}
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=frontend0,service.criticality=low,service.version=${GREPTIMEDB_VERSION:-latest}
     depends_on:
       datanode0:
         condition: service_healthy
@@ -644,23 +694,23 @@ services:
     image: *greptimedb_image
     container_name: flownode0
     ports:
-      - 4004:4004
-      - 4005:4005
+    - 4004:4004
+    - 4005:4005
     command:
-      - flownode
-      - start
-      - --node-id=0
-      - --metasrv-addrs=metasrv:3002
-      - --rpc-bind-addr=0.0.0.0:4004
-      - --rpc-server-addr=flownode0:4004
-      - --http-addr=0.0.0.0:4005
+    - flownode
+    - start
+    - --node-id=0
+    - --metasrv-addrs=metasrv:3002
+    - --rpc-bind-addr=0.0.0.0:4004
+    - --rpc-server-addr=flownode0:4004
+    - --http-addr=0.0.0.0:4005
     environment:
-      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=flownode0,service.criticality=low,service.version=${GREPTIMEDB_VERSION:-latest}
+    - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=docker,service.name=flownode0,service.criticality=low,service.version=${GREPTIMEDB_VERSION:-latest}
     depends_on:
       frontend0:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://flownode0:4005/health" ]
+      test: ["CMD", "curl", "-f", "http://flownode0:4005/health"]
       interval: 5s
       timeout: 3s
       retries: 5
