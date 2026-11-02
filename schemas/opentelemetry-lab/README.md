@@ -15,8 +15,9 @@ The reference page is generated into [`docs/registry.md`](docs/registry.md).
 
 ```
 schemas/opentelemetry-lab/
-├── .weaver.toml           # [registry] v2 = true
+├── .weaver.toml           # [registry] v2 = true, and the [live-check] settings
 ├── .deps/                 # gitignored: semconv model fetched by `make schema-deps`
+├── .live-check/           # gitignored: live-check reports, compose/ and smoke/
 ├── model/                 # the registry: Weaver loads every YAML file below it
 │   ├── manifest.yaml      # schema_url and the semconv dependency
 │   ├── lab/               # lab.* attributes and metrics
@@ -45,7 +46,94 @@ make schema-diff         # changes against origin/main (SCHEMA_BASELINE=<ref>)
 ```
 
 The `Schema / Weaver` workflow runs the same targets on every pull request that
-touches `schemas/**`.
+touches `schemas/**`, and the live-check smoke test below.
+
+## Live check
+
+The registry check reads definitions. `weaver registry live-check` reads the
+telemetry the apps really emit, and reports how it departs from this registry
+and from semantic conventions: a deprecated or unknown attribute, an enum value
+outside its members, a missing required attribute.
+
+### In the lab
+
+The `weaver` service of the `schema` profile listens for OTLP gRPC. With
+`WEAVER_LIVE_CHECK` set, the lgtm collector loads the overlay
+[`etc/otel/otel-collector-weaver.yaml`](../../etc/otel/otel-collector-weaver.yaml)
+as a second `--config`, and tees the app telemetry to it.
+
+```shell
+make schema-live-check-up      # lgtm, the apps and Weaver, with the tee
+# ...use the apps, watch the "Schema compliance" Grafana dashboard...
+make schema-live-check-report  # stop the run, write .live-check/compose/live_check.json
+```
+
+`schema-live-check-up` runs:
+
+```shell
+make schema-deps
+WEAVER_LIVE_CHECK=1 WEAVER_UID=$(id -u) WEAVER_GID=$(id -g) \
+  docker compose --profile lgtm --profile apps --profile schema up -d
+```
+
+`--profile schema` alone starts Weaver, but nothing reaches it: a profile
+cannot change the config of the collector, so the tee has its own switch.
+Without `WEAVER_LIVE_CHECK`, the collector config is the one it always was.
+
+- Weaver sends each finding to the collector as an OTLP log, on a receiver of
+  the overlay (4319) that writes to Loki. The
+  [Schema compliance](http://localhost:3000/d/schema-compliance-lgtm) dashboard
+  reads them: findings per app, per finding id and per level.
+- The report is written when the run stops: `make schema-live-check-report`, or
+  `docker compose stop weaver`. Until then Weaver keeps every sample in memory,
+  so stop a long session and start a new one with
+  `docker compose --profile schema up -d weaver`. While Weaver is stopped, a
+  collector started with `WEAVER_LIVE_CHECK` logs an export error for each
+  batch it tees: start Weaver again, or run the `up` command without the
+  variable.
+- otel-java does not build today (its `openjdk:8-jre-slim` base image is gone),
+  and `docker compose up` stops on the failed build. Until it is fixed, name
+  the services to start, for example
+  `... up -d otel-collector-lgtm loki tempo pyroscope prometheus grafana-lgtm weaver otel-go otel-rust otel-python otel-ts`.
+- The tee pipelines read the `otlp` receiver only, with no `resource` or
+  `resourcedetection` processor, so Weaver sees what the apps emit. The lgtm
+  `logs` pipeline, for instance, replaces every `service.name` with
+  `otel-collector`.
+- The overlay drops the telemetry of the instrumentation libraries the lab
+  does not own (Java agent, Node auto-instrumentations, otelgin, Python
+  instrumentations...), with the reason for each. Their findings would bury
+  the ones the lab code causes.
+
+### In CI
+
+`make schema-live-check-smoke` builds otel-go and otel-rust, points them
+straight at a Weaver container (no collector), calls `/chain` on both, stops
+Weaver through its admin port and writes `.live-check/smoke/live_check.json`.
+It fails when a finding reaches `FAIL_ON` (`violation` by default). The
+`Live check` job of the workflow runs it, writes the counts to the job summary
+and uploads the report.
+
+With no collector, nothing drops the instrumentation libraries there: otelgin
+and the Go host and runtime instrumentations are checked too.
+
+### Settings
+
+`[live-check]` in [`.weaver.toml`](.weaver.toml) holds what the check means,
+and the command line holds how it runs (listener, ports, report output, OTLP
+logs, `--fail-on`), which differ between compose and the smoke test.
+
+- `search_all_attributes = true`: an upstream attribute this registry does not
+  reference is looked up in semconv, rather than reported as
+  `missing_attribute`.
+- `undefined_enum_variant` and `kind_mismatch` are raised to `violation`.
+- Each `finding_filters` entry has its reason above it. A filter matches a
+  finding id, a level, a signal type or a sample name (attribute key, span,
+  metric or event name), never an instrumentation scope: muting a library by
+  scope is done in the collector overlay.
+- Both runs pass `--include-unreferenced`, so the upstream metrics and entities
+  the apps emit (`go.*`, `system.*`, `process.*`...) are known rather than
+  `missing_metric`. Weaver v0.28.0 marks the flag deprecated in favour of
+  importing them in `model/`.
 
 ## Policies
 
@@ -98,3 +186,18 @@ Found by running `otel/weaver:v0.28.0`:
 - `--diagnostic-format gh_workflow_command` prints policy violations but not
   resolution errors such as an unresolved `ref`, so CI keeps the default
   `ansi` format.
+
+Found by running `registry live-check`:
+
+- The OTLP listener and the admin port bind to `--otlp-grpc-address`, which
+  defaults to `127.0.0.1`: in a container it must be `0.0.0.0`.
+- The listener rejects gzip, so the collector exporter sets
+  `compression: none`.
+- Weaver stops on SIGINT, SIGHUP or `POST /stop`, not on SIGTERM: the compose
+  service sets `stop_signal: SIGINT`, or `docker compose stop` would kill it
+  before it writes the report.
+- With a file `--output`, the report is written only when the run stops.
+- With `--emit-otlp-logs` and no `--otlp-logs-endpoint` or
+  `OTEL_EXPORTER_OTLP_*ENDPOINT`, findings would go to `localhost:4317`,
+  Weaver's own listener: Weaver refuses to start. The compose service gives
+  the endpoint, and `.weaver.toml` does not enable the emission.

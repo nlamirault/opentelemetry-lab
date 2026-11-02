@@ -112,6 +112,11 @@ WEAVER = docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp \
 WEAVER_REGISTRY = /src/$(SCHEMA_DIR)/model
 WEAVER_POLICIES = /src/$(SCHEMA_DIR)/policies
 
+# Live-check reports: compose/ for the `schema` profile, smoke/ for the smoke test.
+LIVE_CHECK_DIR = $(SCHEMA_DIR)/.live-check
+# Finding level that fails the smoke test: violation | improvement | information | none.
+FAIL_ON ?= violation
+
 # Git ref `schema-diff` compares against.
 SCHEMA_BASELINE ?= origin/main
 SCHEMA_BASELINE_DIR = $(SCHEMA_DEPS)/baseline
@@ -177,3 +182,22 @@ schema-diff: schema-deps ## Diff the registry against a git ref (SCHEMA_BASELINE
 	$(WEAVER) registry diff -r $(WEAVER_REGISTRY) \
 		--baseline-registry /src/$(SCHEMA_BASELINE_DIR)/$(SCHEMA_DIR)/model \
 		--format markdown --diagnostic-format $(WEAVER_DIAGNOSTIC_FORMAT)
+
+.PHONY: schema-live-check-up
+schema-live-check-up: schema-deps ## Start lgtm, the apps and Weaver, with the collector tee
+	@echo -e "$(INFO)$(INFO_COLOR)[Schema] Start live-check: lgtm, apps, schema$(NO_COLOR)"
+	@WEAVER_LIVE_CHECK=1 WEAVER_UID=$$(id -u) WEAVER_GID=$$(id -g) \
+		docker compose --profile lgtm --profile apps --profile schema up -d
+
+.PHONY: schema-live-check-report
+schema-live-check-report: ## Stop the compose live-check run and write its report
+	@echo -e "$(INFO)$(INFO_COLOR)[Schema] Stop live-check and write the report$(NO_COLOR)"
+	@curl -fsS -X POST http://localhost:4320/stop && echo
+	@jq -r '.statistics.advice_level_counts | to_entries[] | "  \(.key): \(.value)"' \
+		$(LIVE_CHECK_DIR)/compose/live_check.json
+
+.PHONY: schema-live-check-smoke
+schema-live-check-smoke: schema-deps ## Live-check otel-go and otel-rust, with no collector (FAIL_ON=violation)
+	@echo -e "$(INFO)$(INFO_COLOR)[Schema] Live-check smoke test$(NO_COLOR)"
+	@WEAVER_IMAGE=$(WEAVER_IMAGE) REPORT_DIR=$(LIVE_CHECK_DIR)/smoke FAIL_ON=$(FAIL_ON) \
+		./hack/live-check-smoke.sh

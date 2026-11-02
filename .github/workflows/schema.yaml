@@ -10,6 +10,10 @@ on:
     - schemas/**
     - Makefile
     - .github/workflows/schema.yaml
+    # The live-check smoke test builds and runs these apps.
+    - hack/live-check-smoke.sh
+    - apps/otel-go/**
+    - apps/otel-rust/**
   workflow_dispatch: # Allow manual triggering
 
 permissions:
@@ -53,3 +57,49 @@ jobs:
           echo
           make --no-print-directory schema-diff SCHEMA_BASELINE="origin/${BASE_REF}"
         } >> "$GITHUB_STEP_SUMMARY"
+
+  live-check:
+    runs-on: ubuntu-latest
+    name: Live check
+
+    steps:
+    - name: 🚚 Checkout
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+    - name: 📦️ Cache semantic conventions
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: schemas/opentelemetry-lab/.deps/semconv-*
+        key: semconv-${{ hashFiles('schemas/opentelemetry-lab/model/manifest.yaml') }}
+
+    # otel-go and otel-rust export straight to Weaver, with no collector. The
+    # step fails when a finding reaches the violation level.
+    - name: ✅ Live-check otel-go and otel-rust
+      run: make schema-live-check-smoke FAIL_ON=violation
+
+    - name: 📝 Summarize findings
+      if: always()
+      run: |
+        report=schemas/opentelemetry-lab/.live-check/smoke/live_check.json
+        [ -s "$report" ] || exit 0
+        {
+          echo "## Live-check findings (otel-go, otel-rust)"
+          echo
+          echo "| Level | Findings |"
+          echo "| ----- | -------- |"
+          jq -r '.statistics.advice_level_counts | to_entries[] | "| \(.key) | \(.value) |"' "$report"
+          echo
+          echo "| Finding id | Findings |"
+          echo "| ---------- | -------- |"
+          jq -r '.statistics.advice_type_counts | to_entries | sort_by(-.value)[] | "| `\(.key)` | \(.value) |"' "$report"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: 📦️ Upload the report
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: live-check-report
+        path: schemas/opentelemetry-lab/.live-check/smoke/
+        # The report sits under a dot directory, which is skipped by default.
+        include-hidden-files: true
+        if-no-files-found: warn
