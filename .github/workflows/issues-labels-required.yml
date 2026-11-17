@@ -21,11 +21,6 @@ jobs:
       contents: read
 
     steps:
-    - name: Monitor Actions
-      uses: GitHubSecurityLab/actions-permissions/monitor@v1
-      with:
-        config: ${{ vars.PERMISSIONS_CONFIG }}
-
     - name: Require prefix kind
       uses: trstringer/require-label-prefix@v1
       with:
